@@ -15,7 +15,7 @@ export type DbPattern = {
   difficulty: string | null;
   yarn: string | null;
   tool: string | null;
-  total_rows: number;
+  total_instructions: number;
   source: string;
   blob_url: string | null;
   page_count: number | null;
@@ -23,13 +23,22 @@ export type DbPattern = {
   updated_at: string;
 };
 
-export type DbPatternRow = {
+export type DbPatternInstruction = {
   id: string;
   pattern_id: string;
-  row_number: number;
-  section: string | null;
+  position: number;
+  section: string;
+  section_quantity: number;
+  section_position: number;
+  instruction_kind: "round" | "row" | "step" | "setup" | "instruction" | "choice" | "repeat" | "technique";
+  source_label: string | null;
+  instruction_number: number | null;
+  instruction_number_end: number | null;
   instructions: string;
+  notes: string | null;
   stitch_count: number | null;
+  optional: boolean;
+  source_group: string | null;
   confidence: "high" | "medium" | "low" | null;
 };
 
@@ -40,11 +49,11 @@ export type DbProject = {
   name: string;
   status: "planned" | "active" | "completed";
   yarn: string | null;
-  current_row: number;
+  current_instruction: number;
   started_at: string;
   last_worked_at: string;
   completed_at: string | null;
   pattern_name?: string;
-  total_rows?: number;
+  total_instructions?: number;
   craft?: "knit" | "crochet";
 };

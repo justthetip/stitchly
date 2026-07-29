@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, LoaderCircle, RotateCcw } from "lucide-react";
 import { CraftArt } from "@/components/craft-art";
 
-const steps = ["Opening your private PDF", "Reading the pattern text", "Finding rows and rounds", "Preparing your review"];
+const steps = ["Opening your private PDF", "Reading the pattern text", "Finding sections and instructions", "Preparing your review"];
 
 export default function ProcessingPage(){
   const router=useRouter(); const [step,setStep]=useState(0); const [name,setName]=useState("Your pattern"); const [error,setError]=useState(""); const [retry,setRetry]=useState(0);

@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 2,
+  "source": {
+    "filename": "original-pattern.pdf",
+    "pageCount": 7
+  },
+  "pattern": {
+    "name": "Lion",
+    "description": "animal granny square",
+    "designer": "Morgane Peng",
+    "craft": "crochet",
+    "terminology": "US",
+    "difficulty": "Beginner - easy"
+  },
+  "summary": {
+    "sectionCount": 6,
+    "sourceInstructionCount": 23,
+    "guidedInstructionCount": 24,
+    "setupCount": 1,
+    "roundCount": 18,
+    "stepCount": 5
+  },
+  "sections": [
+    {
+      "id": "base-square",
+      "name": "Base square",
+      "kind": "piece",
+      "quantity": 1,
+      "sourcePages": [3],
+      "setup": [],
+      "notes": [],
+      "instructions": [
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 1",
+          "number": 1,
+          "optional": false,
+          "text": "Start with Yellow. mr6 sc, slst in initial sc to close rnd.",
+          "notes": [],
+          "stitchCount": 6
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 2",
+          "number": 2,
+          "optional": false,
+          "text": "ch3, 3dc in next 5 sts, 2dc in last st, slst in third ch of initial ch3 to close rnd.",
+          "notes": [],
+          "stitchCount": 18
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 3",
+          "number": 3,
+          "optional": false,
+          "text": "ch3, dc in next st, (dc in next st, 2dc in next st) * 8, slst in third ch of initial ch3 to close rnd.",
+          "notes": [],
+          "stitchCount": 26
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 4",
+          "number": 4,
+          "optional": false,
+          "text": "ch3, (2dc in next 2 sts, dc in next st) * 8, 3 dc in the last st, slst in third ch of initial ch3 to close rnd. Fasten off.",
+          "notes": [],
+          "stitchCount": 44
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 5",
+          "number": 5,
+          "optional": false,
+          "text": "Join Cream in any st of Rnd 4. Make the first st of the following instruction a standing st. (tr in next st, dc in next st, hdc in next st, sc in next 4 sts, hdc in next st, dc in next st, tr in next st, tr + ch3 + tr in next st) * 4, slst in initial tr.",
+          "notes": [
+            "Work through back loops only. Front loops will be used later to attach the mane."
+          ],
+          "stitchCount": 60
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 6",
+          "number": 6,
+          "optional": false,
+          "text": "ch3, dc in next 10 sts, 2dc + ch2 + 2dc in ch-sp, (dc in next 12 sts, 2dc + ch2 + 2dc in ch-sp) * 3, dc in last st, slst in third ch of initial ch3 to close rnd.",
+          "notes": [],
+          "stitchCount": 72
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 7",
+          "number": 7,
+          "optional": false,
+          "text": "ch3, dc in next 12 sts, dc + ch2 + dc in ch-sp, (dc in next 16 sts, dc + ch2 + dc in ch-sp) * 3, dc in next 3 sts, slst in third ch of initial ch3 to close rnd. Fasten off.",
+          "notes": [],
+          "stitchCount": 80
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 8",
+          "number": 8,
+          "optional": true,
+          "text": "Join Light Brown with a standing dc, dc in next 13 sts, dc + ch2 + dc in ch-sp, (dc in next 18 sts, dc + ch2 + dc in ch-sp) * 3, dc in next 4 sts, slst in initial dc. Fasten off. Weave in the ends.",
+          "notes": [
+            "Optional round."
+          ],
+          "stitchCount": 88
+        }
+      ]
+    },
+    {
+      "id": "ears",
+      "name": "Ears",
+      "kind": "piece",
+      "quantity": 2,
+      "sourcePages": [3],
+      "setup": [],
+      "notes": [],
+      "instructions": [
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 1",
+          "number": 1,
+          "optional": false,
+          "text": "Start with Yellow. mr6 sc.",
+          "notes": [],
+          "stitchCount": 6
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 2",
+          "number": 2,
+          "optional": false,
+          "text": "(sc in next 2 sts, 2 sc in next st) * 2.",
+          "notes": [],
+          "stitchCount": 8
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 3",
+          "number": 3,
+          "optional": false,
+          "text": "sc all around. Fasten off. Weave in the ends and leave a tail for sewing.",
+          "notes": [],
+          "stitchCount": 8
+        }
+      ]
+    },
+    {
+      "id": "muzzle",
+      "name": "Muzzle",
+      "kind": "piece",
+      "quantity": 1,
+      "sourcePages": [3],
+      "setup": [],
+      "notes": [],
+      "instructions": [
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 1",
+          "number": 1,
+          "optional": false,
+          "text": "Start with White. mr5 sc.",
+          "notes": [],
+          "stitchCount": 5
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 2",
+          "number": 2,
+          "optional": false,
+          "text": "2sc in next 5 sts.",
+          "notes": [],
+          "stitchCount": 10
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 3",
+          "number": 3,
+          "optional": false,
+          "text": "(sc in next st, 2sc in next st) * 5.",
+          "notes": [],
+          "stitchCount": 15
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 4",
+          "number": 4,
+          "optional": false,
+          "text": "sc all around. Fasten off. Weave in the end and leave a tail for sewing.",
+          "notes": [],
+          "stitchCount": 15
+        }
+      ]
+    },
+    {
+      "id": "nose",
+      "name": "Nose",
+      "kind": "piece",
+      "quantity": 1,
+      "sourcePages": [4],
+      "setup": [],
+      "notes": [],
+      "instructions": [
+        {
+          "kind": "setup",
+          "sourceLabel": "Setup",
+          "number": null,
+          "optional": false,
+          "text": "Start with Brown. ch3, turn.",
+          "notes": [],
+          "stitchCount": null
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 1",
+          "number": 1,
+          "optional": false,
+          "text": "Start from second ch from hook, 2sc in next 2 sts. Fasten off. Weave in the end and leave a tail for sewing.",
+          "notes": [],
+          "stitchCount": 4
+        }
+      ]
+    },
+    {
+      "id": "mane",
+      "name": "Mane",
+      "kind": "piece",
+      "quantity": 1,
+      "sourcePages": [4],
+      "setup": [],
+      "notes": [
+        "The mane is crocheted in step 4 of the assembly instructions."
+      ],
+      "instructions": [
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 1",
+          "number": 1,
+          "optional": false,
+          "text": "Join Orange in any front loop st between Rnd 4 and Rnd 5. sc all around.",
+          "notes": [],
+          "stitchCount": 44
+        },
+        {
+          "kind": "round",
+          "sourceLabel": "Rnd 2",
+          "number": 2,
+          "optional": false,
+          "text": "(4dc in next st, slst in next 2 sts) * 14, 4dc in next st, slst in next st. Fasten off. Weave in the ends.",
+          "notes": [],
+          "stitchCount": null
+        }
+      ]
+    },
+    {
+      "id": "assembly",
+      "name": "Assembly",
+      "kind": "assembly",
+      "quantity": 1,
+      "sourcePages": [5],
+      "setup": [],
+      "notes": [],
+      "instructions": [
+        {
+          "kind": "step",
+          "sourceLabel": "1",
+          "number": 1,
+          "optional": false,
+          "text": "Stitch the nose onto the muzzle in place along the outer edge of Rnd 3. Embroider the nose and mouth details using the remaining tail.",
+          "notes": [],
+          "stitchCount": null
+        },
+        {
+          "kind": "step",
+          "sourceLabel": "2",
+          "number": 2,
+          "optional": false,
+          "text": "Stitch the muzzle in place. Position the top part of the muzzle above Rnd 1.",
+          "notes": [],
+          "stitchCount": null
+        },
+        {
+          "kind": "step",
+          "sourceLabel": "3",
+          "number": 3,
+          "optional": false,
+          "text": "Use Black yarn to embroider the eyes with a French knot in Rnd 3, 8 stitches apart.",
+          "notes": [],
+          "stitchCount": null
+        },
+        {
+          "kind": "step",
+          "sourceLabel": "4",
+          "number": 4,
+          "optional": false,
+          "text": "Crochet the mane into the base's front loops as explained in the \"Mane\" section.",
+          "notes": [],
+          "stitchCount": null
+        },
+        {
+          "kind": "step",
+          "sourceLabel": "5",
+          "number": 5,
+          "optional": false,
+          "text": "Stitch the ears in place along the outer edge of Rnd 3, roughly 10 stitches apart. Fasten off and weave in all ends.",
+          "notes": [],
+          "stitchCount": null
+        }
+      ]
+    }
+  ]
+}
