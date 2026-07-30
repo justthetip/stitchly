@@ -169,6 +169,97 @@ test("preserves rows as rows instead of converting them to rounds", () => {
   assert.deepEqual(parsed.instructions.map((item) => item.instructionNumber), [1, 2, 3]);
 });
 
+test("parses shorthand rounds, ranges, and continued piece headings", () => {
+  const parsed = parsePatternText([
+    [
+      "Colourful Mini Dino Crochet Pattern",
+      "HEAD AND BODY",
+      "R1: 6 dc in magic circle [6 sts]",
+      "R2: inc in each stitch [12 sts]",
+      "R3 - R5: dc in each stitch [12 sts]",
+      "HEAD AND BODY (continued)",
+      "R6: dec around [6 sts]",
+      "TAIL (make 2)",
+      "R1: 4 dc in magic circle [4 sts]",
+    ].join("\n"),
+  ], "colourful-mini-dino.pdf");
+
+  assert.deepEqual(parsed.sections.map((section) => section.name), ["HEAD AND BODY", "TAIL"]);
+  assert.equal(parsed.sections[1].quantity, 2);
+  assert.deepEqual(
+    parsed.instructions
+      .filter((item) => item.section === "HEAD AND BODY")
+      .map((item) => item.instructionNumber),
+    [1, 2, 3, 4, 5, 6],
+  );
+  assert.deepEqual(
+    parsed.instructions.slice(0, 2).map((item) => item.stitchCount),
+    [6, 12],
+  );
+});
+
+test("parses ordinal and unnumbered follow-on rounds", () => {
+  const parsed = parsePatternText([
+    [
+      "Essential String Shopping Bag",
+      "BAG",
+      "Using a 4.5mm hook make a magic loop.",
+      "1st round 2 sc in each st around. | 12 sts.",
+      "2nd round [2 sc in next st, 1 sc] 6 times. | 18 sts.",
+      "3rd round [1 sc, 2 sc in next st, 1 sc] 6 times. | 24 sts.",
+      "Net stitch set up round 1 sc, [ch 5, skip 3, 1 sc] around.",
+      "Next round Ch 1, work into each chain space.",
+      "Final round Sc around and fasten off.",
+    ].join("\n"),
+  ], "essential-string-shopping-bag.pdf");
+
+  assert.equal(parsed.totalInstructions, 7);
+  assert.deepEqual(
+    parsed.instructions.map((item) => item.instructionKind),
+    ["setup", "round", "round", "round", "round", "round", "round"],
+  );
+  assert.deepEqual(
+    parsed.instructions.slice(1, 4).map((item) => item.stitchCount),
+    [12, 18, 24],
+  );
+  assert.equal(parsed.instructions.at(-1)?.instructionNumber, null);
+  assert.equal(parsed.instructions.at(-1)?.sourceLabel, "Final Round");
+});
+
+test("accepts row labels ending in a parenthesis", () => {
+  const parsed = parsePatternText([
+    [
+      "Flaminia Top",
+      "PANEL",
+      "Row 1): starting from the 6th ch, crochet 1 sc.",
+      "Row 2): 4 ch, turn and work across.",
+      "Row 3): repeat the mesh pattern.",
+    ].join("\n"),
+  ], "flaminia-top.pdf");
+
+  assert.deepEqual(
+    parsed.instructions.map((item) => item.instructionKind),
+    ["row", "row", "row"],
+  );
+  assert.deepEqual(
+    parsed.instructions.map((item) => item.instructionNumber),
+    [1, 2, 3],
+  );
+});
+
+test("selects the English edition from a multilingual PDF", () => {
+  const parsed = parsePatternText([
+    "Baby Turtle\nBODY\nRnd 1: Make 6 sc in a magic ring. (6)",
+    "Baby Turtle\nBODY continued\nRnd 2: Increase in each stitch around. (12)",
+    "Bébé Tortue\nCORPS\nTour 1: Faire 6 mailles dans un cercle magique.",
+    "Bébé Tortue\nCORPS suite\nTour 2: Faire une augmentation dans chaque maille.",
+  ], "baby-turtle.pdf");
+
+  assert.equal(parsed.name, "Baby Turtle");
+  assert.equal(parsed.totalInstructions, 2);
+  assert.ok(parsed.instructions.every((item) => !item.instructions.includes("Faire")));
+});
+
 test("matches the supplied Lion PDF", async (context) => {
   const parsed = await parseLocalPdf("original-pattern.pdf");
   if (!parsed) return context.skip("local sample PDF is not available");

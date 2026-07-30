@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "description": "Minimum structured extraction coverage for the local LoveCrafts PDF corpus.",
+  "patterns": [
+    { "filename": "001-jellyfish-babies.pdf", "minimumInstructionCount": 10 },
+    { "filename": "002-crochet-hearts.pdf", "minimumInstructionCount": 10 },
+    { "filename": "003-squishy-baby-octopus.pdf", "minimumInstructionCount": 10 },
+    { "filename": "005-snuggle-bunny-in-paintbox-yarns-baby-dk.pdf", "minimumInstructionCount": 81 },
+    { "filename": "006-sakura-market-bag.pdf", "minimumInstructionCount": 38 },
+    { "filename": "007-amigurumi-stitch-from-lilo-and-stitch.pdf", "minimumInstructionCount": 131 },
+    { "filename": "008-maes-butterfly-top.pdf", "minimumInstructionCount": 28 },
+    { "filename": "009-leaf-garland.pdf", "minimumInstructionCount": 12 },
+    { "filename": "010-baby-turtles.pdf", "minimumInstructionCount": 13 },
+    { "filename": "011-colourful-mini-dino.pdf", "minimumInstructionCount": 40 },
+    { "filename": "012-bergen-bottle-cozy.pdf", "minimumInstructionCount": 39 },
+    { "filename": "013-winnie-the-pooh.pdf", "minimumInstructionCount": 64 },
+    { "filename": "014-that-s-meshed-up-top.pdf", "minimumInstructionCount": 7 },
+    { "filename": "015-essential-string-shopping-bag.pdf", "minimumInstructionCount": 37 },
+    { "filename": "016-flaminia-top.pdf", "minimumInstructionCount": 7 }
+  ]
+}
