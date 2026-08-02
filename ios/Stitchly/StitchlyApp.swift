@@ -29,20 +29,33 @@ struct RootView: View {
 
 struct SignInView: View {
     @EnvironmentObject private var auth: AuthManager
+    @State private var email = ""
+    @State private var password = ""
+    @State private var name = ""
+    @State private var createAccount = false
+    private var canSubmit: Bool { email.contains("@") && password.count >= 8 && (!createAccount || !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
     var body: some View {
         ZStack {
             LinearGradient(colors: [.cream, .white, .brandPink.opacity(0.16)], startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
-            VStack(spacing: 28) {
-                Spacer()
-                Image("BrandIcon").resizable().scaledToFit().frame(width: 132, height: 132).clipShape(.rect(cornerRadius: 28)).shadow(color: .brandPink.opacity(0.22), radius: 24, y: 12)
-                VStack(spacing: 8) { Text("Stitchly").font(.system(size: 44, weight: .bold, design: .rounded)).foregroundStyle(Color.ink); Text("Every pattern, one calm step at a time.").font(.title3).multilineTextAlignment(.center).foregroundStyle(.secondary) }
-                Spacer()
-                SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
-                    .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(auth.isWorking)
-                Button { auth.signInWithWeb() } label: { Label("Continue with email or Google", systemImage: "envelope.fill").frame(maxWidth: .infinity) }
-                    .buttonStyle(.bordered).controlSize(.large).disabled(auth.isWorking)
-                Text("Your patterns stay private and belong to you.").font(.footnote).foregroundStyle(.secondary)
-            }.padding(28)
+            ScrollView {
+                VStack(spacing: 22) {
+                    Image("BrandIcon").resizable().scaledToFit().frame(width: 108, height: 108).clipShape(.rect(cornerRadius: 24)).shadow(color: .brandPink.opacity(0.22), radius: 20, y: 10)
+                    VStack(spacing: 6) { Text("Stitchly").font(.system(size: 40, weight: .bold, design: .rounded)).foregroundStyle(Color.ink); Text(createAccount ? "Create your maker space." : "Welcome back, maker.").font(.title3).foregroundStyle(.secondary) }
+                    VStack(spacing: 12) {
+                        if createAccount { TextField("Your name", text: $name).textContentType(.name).textInputAutocapitalization(.words) }
+                        TextField("Email address", text: $email).textContentType(.emailAddress).textInputAutocapitalization(.never).keyboardType(.emailAddress).autocorrectionDisabled()
+                        SecureField("Password", text: $password).textContentType(createAccount ? .newPassword : .password)
+                    }.padding(16).background(.regularMaterial, in: .rect(cornerRadius: 18))
+                    Button { Task { await auth.authenticateWithEmail(email: email, password: password, name: createAccount ? name : nil, createAccount: createAccount) } } label: {
+                        Group { if auth.isWorking { ProgressView() } else { Text(createAccount ? "Create account" : "Sign in") } }.frame(maxWidth: .infinity)
+                    }.buttonStyle(.borderedProminent).controlSize(.large).disabled(!canSubmit || auth.isWorking)
+                    Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account") { withAnimation { createAccount.toggle() } }.font(.subheadline.weight(.semibold)).disabled(auth.isWorking)
+                    HStack { Rectangle().frame(height: 1); Text("or").font(.footnote); Rectangle().frame(height: 1) }.foregroundStyle(.tertiary)
+                    SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
+                        .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(auth.isWorking)
+                    Text("Your patterns stay private and belong to you.").font(.footnote).foregroundStyle(.secondary)
+                }.padding(28).padding(.top, 24)
+            }.scrollDismissesKeyboard(.interactively)
         }
     }
 }

@@ -2,7 +2,6 @@ import AuthenticationServices
 import CryptoKit
 import Foundation
 import Security
-import UIKit
 
 @MainActor final class AuthManager: ObservableObject {
     @Published private(set) var user: User?
@@ -10,8 +9,6 @@ import UIKit
     @Published var errorMessage: String?
     @Published var isWorking = false
     private var nonce: String?
-    private var webSession: ASWebAuthenticationSession?
-    private let webPresentation = WebAuthPresentationContext()
     private let keychainKey = "native-session"
 
     init() {
@@ -50,31 +47,11 @@ import UIKit
         } catch { errorMessage = error.localizedDescription }
     }
 
-    func signInWithWeb() {
-        let verifier = Self.randomNonce()
-        let challenge = Self.sha256Base64URL(verifier)
-        var components = URLComponents(url: APIClient.baseURL.appending(path: "/native-connect"), resolvingAgainstBaseURL: false)!
-        components.queryItems = [.init(name: "challenge", value: challenge)]
-        let session = ASWebAuthenticationSession(url: components.url!, callbackURLScheme: "stitchly") { [weak self] callbackURL, error in
-            Task { @MainActor in
-                guard let self else { return }
-                self.webSession = nil
-                if let error { if (error as? ASWebAuthenticationSessionError)?.code != .canceledLogin { self.errorMessage = error.localizedDescription }; return }
-                guard let callbackURL, let code = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "code" })?.value else { self.errorMessage = "The sign-in response was invalid."; return }
-                await self.redeemWebCode(code, verifier: verifier)
-            }
-        }
-        session.presentationContextProvider = webPresentation
-        session.prefersEphemeralWebBrowserSession = false
-        webSession = session
-        session.start()
-    }
-
-    private func redeemWebCode(_ code: String, verifier: String) async {
+    func authenticateWithEmail(email: String, password: String, name: String?, createAccount: Bool) async {
         isWorking = true; defer { isWorking = false }
         do {
-            struct Body: Encodable { let code: String; let verifier: String }
-            let response: SessionResponse = try await APIClient(token: nil).request("/api/native-auth/redeem", method: "POST", body: Body(code: code, verifier: verifier))
+            struct Body: Encodable { let email: String; let password: String; let name: String?; let mode: String }
+            let response: SessionResponse = try await APIClient(token: nil).request("/api/native-auth/email", method: "POST", body: Body(email: email.trimmingCharacters(in: .whitespacesAndNewlines), password: password, name: name?.trimmingCharacters(in: .whitespacesAndNewlines), mode: createAccount ? "sign-up" : "sign-in"))
             guard let issuedToken = response.token else { throw APIError.invalidResponse }
             token = issuedToken; user = response.user; Keychain.write(issuedToken, key: keychainKey)
         } catch { errorMessage = error.localizedDescription }
@@ -84,15 +61,7 @@ import UIKit
     func deleteAccount() async throws { let _: EmptyResponse = try await client.request("/api/native-auth/account", method: "DELETE"); signOutLocally() }
     private func signOutLocally() { Keychain.delete(keychainKey); token = nil; user = nil }
     private static func sha256(_ value: String) -> String { SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined() }
-    private static func sha256Base64URL(_ value: String) -> String { Data(SHA256.hash(data: Data(value.utf8))).base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "") }
     private static func randomNonce() -> String { (0..<32).compactMap { _ in "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._".randomElement() }.reduce("") { $0 + String($1) } }
-}
-
-@MainActor private final class WebAuthPresentationContext: NSObject, ASWebAuthenticationPresentationContextProviding {
-    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
-        return scene?.windows.first(where: \.isKeyWindow) ?? ASPresentationAnchor()
-    }
 }
 
 private enum Keychain {
