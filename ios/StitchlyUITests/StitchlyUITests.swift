@@ -3,7 +3,7 @@ import XCTest
 @MainActor final class StitchlyUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
-    func testProjectReaderJourney() {
+    func testProjectReaderJourney() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-demo"]
         app.launch()
@@ -16,6 +16,7 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Row 2"].waitForExistence(timeout: 3))
         app.buttons["reader-sections"].tap()
         XCTAssertTrue(app.navigationBars["Pattern sections"].waitForExistence(timeout: 3))
+        try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
         app.buttons.matching(NSPredicate(format: "label CONTAINS 'Sleeves'")).firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Cuff"].waitForExistence(timeout: 3))
     }

@@ -38,7 +38,11 @@ struct ReaderView: View {
     @State private var note = ""
     @State private var showNotes = false
     @State private var showSections = false
-    init(project: Project) { self.project = project; _position = State(initialValue: project.currentInstruction) }
+    init(project: Project, showSectionsInitially: Bool = false) {
+        self.project = project
+        _position = State(initialValue: project.currentInstruction)
+        _showSections = State(initialValue: showSectionsInitially)
+    }
     var current: Instruction? { instructions.first { $0.position == position } ?? instructions.first }
     var body: some View {
         ZStack {
@@ -89,18 +93,29 @@ struct ReaderView: View {
                             .foregroundStyle(Color.brandPink)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(section.title).font(.headline).foregroundStyle(.primary)
-                            Text("Steps \(section.firstPosition)–\(section.lastPosition) · \(section.instructions.count) instructions").font(.subheadline).foregroundStyle(.secondary)
+                            Text("Steps \(section.firstPosition)–\(section.lastPosition) · \(section.instructions.count) instructions").font(.subheadline).foregroundStyle(Color.ink)
                         }
                         Spacer()
-                        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Color.ink)
                     }.padding(.vertical, 5)
                 }
                 .accessibilityLabel("\(section.title), steps \(section.firstPosition) to \(section.lastPosition)")
+                .buttonStyle(.plain)
             }
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemBackground))
             .navigationTitle("Pattern sections")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showSections = false } } }
-        }.presentationDetents([.medium, .large])
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { showSections = false } label: { Image(systemName: "xmark") }
+                        .tint(.ink)
+                        .accessibilityLabel("Close sections")
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationBackground(Color(.systemBackground))
     }
     private func move(_ delta: Int) { position = min(max(position + delta, 1), max(instructions.count, project.totalInstructions ?? 1)); Task { await persistProgress() } }
     private func persistProgress() async { guard auth.token != "demo" else { return }; struct Body: Encodable { let currentInstruction: Int }; let _: EmptyResponse? = try? await auth.client.request("/api/projects/\(project.id)", method: "PATCH", body: Body(currentInstruction: position)); Telemetry.shared.track("reader_progressed") }
