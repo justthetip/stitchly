@@ -60,10 +60,38 @@ struct PatternDetailView: View {
     @EnvironmentObject private var auth: AuthManager
     let pattern: Pattern
     @State private var instructions: [Instruction] = []
+    @State private var isLoading = true
+    @State private var error: String?
     var body: some View {
         List {
             Section { VStack(alignment: .leading, spacing: 14) { CraftBadge(craft: pattern.craft); Text(pattern.name).font(.largeTitle.bold()); if let designer = pattern.designer { Text("by \(designer)").foregroundStyle(.secondary) }; HStack { if let yarn = pattern.yarn { Label(yarn, systemImage: "circle.fill") }; if let tool = pattern.tool { Label(tool, systemImage: "wrench.and.screwdriver") } }.font(.subheadline).foregroundStyle(.secondary) }.padding(.vertical) }
-            ForEach(Dictionary(grouping: instructions, by: \.section).keys.sorted(), id: \.self) { section in Section(section) { ForEach(instructions.filter { $0.section == section }) { instruction in VStack(alignment: .leading, spacing: 5) { Text(instruction.sourceLabel ?? "Step \(instruction.position)").font(.headline); Text(instruction.instructions).foregroundStyle(.secondary).lineLimit(3) }.padding(.vertical, 3) } } }
-        }.navigationBarTitleDisplayMode(.inline).task { if auth.token == "demo" { instructions = DemoData.instructions } else if let response: PatternResponse = try? await auth.client.request("/api/patterns/\(pattern.id)") { instructions = response.instructions } }
+            if isLoading { Section { ProgressView("Laying out your pattern…") } }
+            ForEach(instructions.patternSections) { patternSection in
+                Section {
+                    ForEach(patternSection.instructions) { instruction in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack { Text(instruction.sourceLabel ?? "Step \(instruction.position)").font(.headline); Spacer(); Text("Step \(instruction.position)").font(.caption).foregroundStyle(.secondary) }
+                            Text(instruction.instructions).foregroundStyle(.secondary)
+                            if let notes = instruction.notes { Label(notes, systemImage: "lightbulb").font(.callout).foregroundStyle(Color.ink) }
+                        }.padding(.vertical, 4)
+                    }
+                } header: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(patternSection.title)
+                        Text("Steps \(patternSection.firstPosition)–\(patternSection.lastPosition) · \(patternSection.instructions.count) instructions").font(.caption).textCase(nil)
+                    }.accessibilityElement(children: .combine)
+                }
+            }
+        }
+        .navigationTitle("Pattern overview")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+        .alert("Couldn’t open pattern", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("Try again") { Task { await load() } } } message: { Text(error ?? "") }
+    }
+    private func load() async {
+        isLoading = true; defer { isLoading = false }
+        if auth.token == "demo" { instructions = DemoData.instructions; return }
+        do { let response: PatternResponse = try await auth.client.request("/api/patterns/\(pattern.id)"); instructions = response.instructions }
+        catch { self.error = error.localizedDescription }
     }
 }

@@ -28,6 +28,29 @@ struct Instruction: Codable, Identifiable, Hashable, Sendable {
     let optional: Bool
 }
 
+struct PatternSection: Identifiable, Hashable, Sendable {
+    let title: String
+    let instructions: [Instruction]
+    var id: String { "\(instructions.first?.position ?? 0)-\(title)" }
+    var firstPosition: Int { instructions.first?.position ?? 1 }
+    var lastPosition: Int { instructions.last?.position ?? firstPosition }
+}
+
+extension Array where Element == Instruction {
+    var patternSections: [PatternSection] {
+        let ordered = sorted { $0.position < $1.position }
+        var sections: [PatternSection] = []
+        for instruction in ordered {
+            if let last = sections.last, last.title == instruction.section {
+                sections[sections.count - 1] = PatternSection(title: last.title, instructions: last.instructions + [instruction])
+            } else {
+                sections.append(PatternSection(title: instruction.section, instructions: [instruction]))
+            }
+        }
+        return sections
+    }
+}
+
 struct Project: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let patternId: String
@@ -59,7 +82,10 @@ enum DemoData {
     static let instructions = [
         Instruction(id: "i1", position: 1, section: "Back panel", instructionKind: "setup", sourceLabel: "Foundation", instructions: "Chain 72 loosely. Turn, working into the back bumps for a neat lower edge.", notes: "Keep the foundation chain relaxed.", stitchCount: 72, optional: false),
         Instruction(id: "i2", position: 2, section: "Back panel", instructionKind: "row", sourceLabel: "Row 1", instructions: "Double crochet in the fourth chain from the hook and in every chain across. Turn.", notes: nil, stitchCount: 70, optional: false),
-        Instruction(id: "i3", position: 3, section: "Back panel", instructionKind: "row", sourceLabel: "Row 2", instructions: "Chain 3, skip the first stitch, double crochet across. Turn.", notes: "Repeat this row until the panel measures 38 cm.", stitchCount: 70, optional: false)
+        Instruction(id: "i3", position: 3, section: "Back panel", instructionKind: "row", sourceLabel: "Row 2", instructions: "Chain 3, skip the first stitch, double crochet across. Turn.", notes: "Repeat this row until the panel measures 38 cm.", stitchCount: 70, optional: false),
+        Instruction(id: "i4", position: 4, section: "Left front", instructionKind: "setup", sourceLabel: "Foundation", instructions: "Chain 38 loosely for the left front panel.", notes: nil, stitchCount: 38, optional: false),
+        Instruction(id: "i5", position: 5, section: "Left front", instructionKind: "row", sourceLabel: "Row 1", instructions: "Double crochet across, keeping the front edge relaxed.", notes: nil, stitchCount: 36, optional: false),
+        Instruction(id: "i6", position: 6, section: "Sleeves", instructionKind: "setup", sourceLabel: "Cuff", instructions: "Work the cuff ribbing to the required wrist measurement.", notes: "Make two matching sleeves.", stitchCount: nil, optional: false)
     ]
     static let project = Project(id: "project-demo", patternId: pattern.id, name: "My coral cardigan", status: "active", yarn: "Coral merino blend", currentInstruction: 2, patternName: pattern.name, totalInstructions: 18, craft: "crochet")
 }

@@ -40,12 +40,12 @@ struct SignInView: View {
             ScrollView {
                 VStack(spacing: 22) {
                     Image("BrandIcon").resizable().scaledToFit().frame(width: 108, height: 108).clipShape(.rect(cornerRadius: 24)).shadow(color: .brandPink.opacity(0.22), radius: 20, y: 10)
-                    VStack(spacing: 6) { Text("Stitchly").font(.system(size: 40, weight: .bold, design: .rounded)).foregroundStyle(Color.ink); Text(createAccount ? "Create your maker space." : "Welcome back, maker.").font(.title3).foregroundStyle(.secondary) }
+                    VStack(spacing: 6) { Text("Stitchly").font(.system(.largeTitle, design: .rounded, weight: .bold)).foregroundStyle(Color.ink); Text(createAccount ? "Create your maker space." : "Welcome back, maker.").font(.title3).foregroundStyle(.secondary) }
                     VStack(spacing: 12) {
-                        if createAccount { TextField("Your name", text: $name).textContentType(.name).textInputAutocapitalization(.words) }
-                        TextField("Email address", text: $email).textContentType(.emailAddress).textInputAutocapitalization(.never).keyboardType(.emailAddress).autocorrectionDisabled()
-                        SecureField("Password", text: $password).textContentType(createAccount ? .newPassword : .password)
-                    }.padding(16).background(.regularMaterial, in: .rect(cornerRadius: 18))
+                        if createAccount { authField("Your name") { TextField("", text: $name).textContentType(.name).textInputAutocapitalization(.words).accessibilityLabel("Your name") } }
+                        authField("Email address") { TextField("", text: $email).textContentType(.emailAddress).textInputAutocapitalization(.never).keyboardType(.emailAddress).autocorrectionDisabled().accessibilityLabel("Email address") }
+                        authField("Password") { SecureField("", text: $password).textContentType(createAccount ? .newPassword : .password).accessibilityLabel("Password") }
+                    }
                     Button {
                         if canSubmit { Task { await auth.authenticateWithEmail(email: email, password: password, name: createAccount ? name : nil, createAccount: createAccount) } }
                         else { auth.errorMessage = createAccount ? "Enter your name, a valid email address, and a password of at least 8 characters." : "Enter a valid email address and a password of at least 8 characters." }
@@ -54,12 +54,18 @@ struct SignInView: View {
                     }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).disabled(auth.isWorking)
                     Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account") { withAnimation { createAccount.toggle() } }
                         .font(.subheadline.weight(.semibold)).tint(.ink).frame(minHeight: 44).contentShape(.rect).disabled(auth.isWorking)
-                    HStack { Rectangle().frame(height: 1); Text("or").font(.footnote); Rectangle().frame(height: 1) }.foregroundStyle(.tertiary)
+                    HStack { Rectangle().frame(height: 1); Text("or").font(.footnote.weight(.semibold)); Rectangle().frame(height: 1) }.foregroundStyle(Color.ink.opacity(0.72))
                     SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
                         .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(auth.isWorking)
-                    Text("Your patterns stay private and belong to you.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Your patterns stay private and belong to you.").font(.footnote).foregroundStyle(Color.ink)
                 }.padding(28).padding(.top, 24)
             }.scrollDismissesKeyboard(.interactively)
+        }
+    }
+    private func authField<Field: View>(_ label: String, @ViewBuilder field: () -> Field) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(label).font(.caption.weight(.semibold)).foregroundStyle(Color.ink)
+            field().textFieldStyle(.roundedBorder).controlSize(.large)
         }
     }
 }

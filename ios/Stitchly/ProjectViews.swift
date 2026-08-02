@@ -37,6 +37,7 @@ struct ReaderView: View {
     @State private var position: Int
     @State private var note = ""
     @State private var showNotes = false
+    @State private var showSections = false
     init(project: Project) { self.project = project; _position = State(initialValue: project.currentInstruction) }
     var current: Instruction? { instructions.first { $0.position == position } ?? instructions.first }
     var body: some View {
@@ -48,19 +49,58 @@ struct ReaderView: View {
                 ScrollView {
                     VStack(spacing: 18) {
                         Text(current?.sourceLabel ?? "Step \(position)").font(.title3.weight(.semibold)).foregroundStyle(Color.brandPink)
-                        Text(current?.instructions ?? "Loading your next step…").font(.system(.title, design: .rounded, weight: .semibold)).multilineTextAlignment(.center).lineSpacing(8)
+                        Text(current?.instructions ?? "Loading your next step…")
+                            .font(.system(.title, design: .rounded, weight: .semibold))
+                            .foregroundStyle(Color.ink)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(8)
+                            .padding(20)
+                            .background(Color.white, in: .rect(cornerRadius: 20))
                         if let stitchCount = current?.stitchCount { Label("\(stitchCount) stitches", systemImage: "number").font(.headline).foregroundStyle(Color.ink) }
                         if let notes = current?.notes { Text(notes).font(.body).foregroundStyle(.secondary).padding().background(.thinMaterial, in: .rect(cornerRadius: 16)) }
                     }.frame(maxWidth: .infinity).padding(28)
                 }.defaultScrollAnchor(.center)
                 HStack(spacing: 18) {
-                    Button { move(-1) } label: { Label("Previous", systemImage: "chevron.left").frame(maxWidth: .infinity) }.buttonStyle(.bordered).controlSize(.large).disabled(position <= 1)
-                    Button { move(1) } label: { Label("Next", systemImage: "chevron.right").labelStyle(.titleAndIcon).frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).controlSize(.large).disabled(position >= max(instructions.count, project.totalInstructions ?? 1))
+                    Button { move(-1) } label: { Label("Previous", systemImage: "chevron.left").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).disabled(position <= 1)
+                    Button { move(1) } label: { Label("Next", systemImage: "chevron.right").labelStyle(.titleAndIcon).frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).disabled(position >= max(instructions.count, project.totalInstructions ?? 1))
                 }.padding()
             }
-        }.navigationTitle(project.name).navigationBarTitleDisplayMode(.inline).toolbar { Button("Note", systemImage: "square.and.pencil") { showNotes = true } }.toolbar(.hidden, for: .tabBar)
+        }.navigationTitle(project.name).navigationBarTitleDisplayMode(.inline).toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button("Sections", systemImage: "list.bullet.rectangle") { showSections = true }
+                    .accessibilityIdentifier("reader-sections")
+                Button("Note", systemImage: "square.and.pencil") { showNotes = true }
+            }
+        }.toolbar(.hidden, for: .tabBar)
+            .sheet(isPresented: $showSections) { sectionNavigator }
             .sheet(isPresented: $showNotes) { NavigationStack { Form { TextEditor(text: $note).frame(minHeight: 160) }.navigationTitle("Step note").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showNotes = false } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { Task { await saveNote() } }.disabled(note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) } } } }
             .task { Telemetry.shared.track("reader_opened"); if auth.token == "demo" { instructions = DemoData.instructions } else if let response: ProjectResponse = try? await auth.client.request("/api/projects/\(project.id)") { instructions = response.instructions } }
+    }
+    private var sectionNavigator: some View {
+        NavigationStack {
+            List(instructions.patternSections) { section in
+                Button {
+                    position = section.firstPosition
+                    showSections = false
+                    Task { await persistProgress() }
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: section.firstPosition == current?.position || section.instructions.contains(where: { $0.position == position }) ? "bookmark.fill" : "bookmark")
+                            .foregroundStyle(Color.brandPink)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(section.title).font(.headline).foregroundStyle(.primary)
+                            Text("Steps \(section.firstPosition)–\(section.lastPosition) · \(section.instructions.count) instructions").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                    }.padding(.vertical, 5)
+                }
+                .accessibilityLabel("\(section.title), steps \(section.firstPosition) to \(section.lastPosition)")
+            }
+            .navigationTitle("Pattern sections")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showSections = false } } }
+        }.presentationDetents([.medium, .large])
     }
     private func move(_ delta: Int) { position = min(max(position + delta, 1), max(instructions.count, project.totalInstructions ?? 1)); Task { await persistProgress() } }
     private func persistProgress() async { guard auth.token != "demo" else { return }; struct Body: Encodable { let currentInstruction: Int }; let _: EmptyResponse? = try? await auth.client.request("/api/projects/\(project.id)", method: "PATCH", body: Body(currentInstruction: position)); Telemetry.shared.track("reader_progressed") }

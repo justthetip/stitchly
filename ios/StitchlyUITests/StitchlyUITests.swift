@@ -14,6 +14,10 @@ import XCTest
         XCTAssertTrue(app.buttons["Next"].isHittable)
         app.buttons["Next"].tap()
         XCTAssertTrue(app.staticTexts["Row 2"].waitForExistence(timeout: 3))
+        app.buttons["reader-sections"].tap()
+        XCTAssertTrue(app.navigationBars["Pattern sections"].waitForExistence(timeout: 3))
+        app.buttons.matching(NSPredicate(format: "label CONTAINS 'Sleeves'")).firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Cuff"].waitForExistence(timeout: 3))
     }
 
     func testLibraryJourneyAtLargestDynamicType() {
@@ -23,6 +27,11 @@ import XCTest
         XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Wildflower Cardigan"].exists)
         XCTAssertTrue(app.buttons["Import"].isHittable)
+        app.staticTexts["Wildflower Cardigan"].tap()
+        XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Back panel"].exists)
+        for _ in 0..<4 { app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["Left front"].waitForExistence(timeout: 3))
     }
 
     func testNativeAuthenticationScreenIsAccessible() throws {
