@@ -13,6 +13,7 @@
 		49D7B6650ED27275AB1BA9CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5F144145528B63171AD36E0E /* Assets.xcassets */; };
 		7AAECFC44F62BF501A381C43 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2816538EED2221611A1801B4 /* Models.swift */; };
 		93ADAD6FC413C6DB3C89814D /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815A74C9D4BBFC5D122B0928 /* AccountView.swift */; };
+		9D18D04834E28D5F7B6F7204 /* StitchlyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB3E3A95E4217D5578C0845 /* StitchlyUITests.swift */; };
 		BAF7C2DEF383F1C6B39FD9EB /* LibraryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */; };
 		BCDAAAB1E28B9386A5B06621 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83F84F149B7E2B4A0682623D /* Telemetry.swift */; };
 		BE8B60903D55DFC210A87738 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E0C769A63C577B2B309AD2 /* APIClient.swift */; };
@@ -27,12 +28,21 @@
 			remoteGlobalIDString = CFF290397004D774A12DDF76;
 			remoteInfo = Stitchly;
 		};
+		62BE2D981C778430CE4C5A15 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0BFA9D8108D60665E696E87A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CFF290397004D774A12DDF76;
+			remoteInfo = Stitchly;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectViews.swift; sourceTree = "<group>"; };
 		2816538EED2221611A1801B4 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		2DB3E3A95E4217D5578C0845 /* StitchlyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchlyUITests.swift; sourceTree = "<group>"; };
 		5F144145528B63171AD36E0E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		68EF58EA17CE4C75A76CA17C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		761106EF997B9870971DA39A /* StitchlyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchlyTests.swift; sourceTree = "<group>"; };
 		806CE3EF509AEF3EBB9E2E3A /* StitchlyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = StitchlyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		815A74C9D4BBFC5D122B0928 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
@@ -42,6 +52,7 @@
 		C944A7AFC60449A5D4329DAB /* Stitchly.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Stitchly.entitlements; sourceTree = "<group>"; };
 		E1E0C769A63C577B2B309AD2 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViews.swift; sourceTree = "<group>"; };
+		E5FAA1B8DE263DC7D95E86EF /* StitchlyUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = StitchlyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F35B38BE7439864A8B02638C /* StitchlyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchlyApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -51,6 +62,7 @@
 			children = (
 				6083FDB89DE9D01D39C595FF /* Stitchly */,
 				D52F38FAB7E7AB000A1DA9E7 /* StitchlyTests */,
+				62A7E4C71355C1D13645BEAD /* StitchlyUITests */,
 				92CBEF13FECAA62D74D115A4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -62,6 +74,7 @@
 				E1E0C769A63C577B2B309AD2 /* APIClient.swift */,
 				5F144145528B63171AD36E0E /* Assets.xcassets */,
 				9B5292D329738A085F62B463 /* AuthManager.swift */,
+				68EF58EA17CE4C75A76CA17C /* Info.plist */,
 				E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */,
 				2816538EED2221611A1801B4 /* Models.swift */,
 				01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */,
@@ -72,11 +85,20 @@
 			path = Stitchly;
 			sourceTree = "<group>";
 		};
+		62A7E4C71355C1D13645BEAD /* StitchlyUITests */ = {
+			isa = PBXGroup;
+			children = (
+				2DB3E3A95E4217D5578C0845 /* StitchlyUITests.swift */,
+			);
+			path = StitchlyUITests;
+			sourceTree = "<group>";
+		};
 		92CBEF13FECAA62D74D115A4 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				B32F63E003499D6CC7AE4A51 /* Stitchly.app */,
 				806CE3EF509AEF3EBB9E2E3A /* StitchlyTests.xctest */,
+				E5FAA1B8DE263DC7D95E86EF /* StitchlyUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -92,6 +114,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A709F03BEF46A638169845AA /* StitchlyUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D31314861C8CE2CED4B76F33 /* Build configuration list for PBXNativeTarget "StitchlyUITests" */;
+			buildPhases = (
+				46D05EB20B8E077E5A37900C /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B9B9B16648174DDB10440D6E /* PBXTargetDependency */,
+			);
+			name = StitchlyUITests;
+			packageProductDependencies = (
+			);
+			productName = StitchlyUITests;
+			productReference = E5FAA1B8DE263DC7D95E86EF /* StitchlyUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		AA3415E077D1219216D358B1 /* StitchlyTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 65C85D6723E123C95E923849 /* Build configuration list for PBXNativeTarget "StitchlyTests" */;
@@ -137,6 +177,11 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					A709F03BEF46A638169845AA = {
+						DevelopmentTeam = GJR42FB3HW;
+						ProvisioningStyle = Automatic;
+						TestTargetID = CFF290397004D774A12DDF76;
+					};
 					AA3415E077D1219216D358B1 = {
 						DevelopmentTeam = GJR42FB3HW;
 						ProvisioningStyle = Automatic;
@@ -163,6 +208,7 @@
 			targets = (
 				CFF290397004D774A12DDF76 /* Stitchly */,
 				AA3415E077D1219216D358B1 /* StitchlyTests */,
+				A709F03BEF46A638169845AA /* StitchlyUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -179,6 +225,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		46D05EB20B8E077E5A37900C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9D18D04834E28D5F7B6F7204 /* StitchlyUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8BCE9FA3478C99C0A2FA7B33 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -205,6 +259,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		B9B9B16648174DDB10440D6E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CFF290397004D774A12DDF76 /* Stitchly */;
+			targetProxy = 62BE2D981C778430CE4C5A15 /* PBXContainerItemProxy */;
+		};
 		D915BAAA0B2611C09E319FA1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = CFF290397004D774A12DDF76 /* Stitchly */;
@@ -248,7 +307,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -273,19 +332,30 @@
 			};
 			name = Release;
 		};
+		2222DE0BD0A2C1B44E2F8297 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lukejeffproduct.stitchly.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Stitchly;
+			};
+			name = Debug;
+		};
 		2725D289648660919EDA372D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Stitchly/Stitchly.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Stitchly;
-				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				INFOPLIST_FILE = Stitchly/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -294,6 +364,23 @@
 				PRODUCT_NAME = Stitchly;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		6CBE470097617B455DEC1F43 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lukejeffproduct.stitchly.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Stitchly;
 			};
 			name = Release;
 		};
@@ -332,7 +419,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -404,13 +491,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Stitchly/Stitchly.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Stitchly;
-				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				INFOPLIST_FILE = Stitchly/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -448,6 +529,15 @@
 			buildConfigurations = (
 				A119F922FA7D09080CDFAC80 /* Debug */,
 				BB472794E08F69F47C500772 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D31314861C8CE2CED4B76F33 /* Build configuration list for PBXNativeTarget "StitchlyUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2222DE0BD0A2C1B44E2F8297 /* Debug */,
+				6CBE470097617B455DEC1F43 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

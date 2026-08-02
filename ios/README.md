@@ -21,3 +21,5 @@ The production API is `https://stitchly-application.vercel.app`. Native sessions
 4. Verify Dynamic Type at the largest accessibility size and complete the reader flow with VoiceOver.
 5. Sign out and back in, then verify the same private data returns.
 6. Confirm account deletion requires confirmation and removes the account.
+
+The checked-in unit and UI suites cover production TLS, demo data integrity, the project-to-reader journey, reader progress, the library, and an accessibility Dynamic Type launch. GitHub Actions repeats the web and iOS checks on every push and pull request.

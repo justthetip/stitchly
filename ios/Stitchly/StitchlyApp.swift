@@ -39,6 +39,8 @@ struct SignInView: View {
                 Spacer()
                 SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
                     .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(auth.isWorking)
+                Button { auth.signInWithWeb() } label: { Label("Continue with email or Google", systemImage: "envelope.fill").frame(maxWidth: .infinity) }
+                    .buttonStyle(.bordered).controlSize(.large).disabled(auth.isWorking)
                 Text("Your patterns stay private and belong to you.").font(.footnote).foregroundStyle(.secondary)
             }.padding(28)
         }

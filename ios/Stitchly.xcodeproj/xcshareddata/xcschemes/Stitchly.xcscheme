@@ -50,6 +50,17 @@
                ReferencedContainer = "container:Stitchly.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A709F03BEF46A638169845AA"
+               BuildableName = "StitchlyUITests.xctest"
+               BlueprintName = "StitchlyUITests"
+               ReferencedContainer = "container:Stitchly.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>
