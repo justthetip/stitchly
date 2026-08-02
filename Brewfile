@@ -1,0 +1,5 @@
+brew "fastlane"
+brew "swiftformat"
+brew "swiftlint"
+brew "xcbeautify"
+brew "xcodegen"

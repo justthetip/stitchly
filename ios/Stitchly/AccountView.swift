@@ -1,0 +1,19 @@
+import SwiftUI
+
+struct AccountView: View {
+    @EnvironmentObject private var auth: AuthManager
+    @State private var confirmDelete = false
+    @State private var deletionError: String?
+    var body: some View {
+        NavigationStack {
+            List {
+                Section { HStack(spacing: 14) { Image(systemName: "person.crop.circle.fill").font(.system(size: 48)).foregroundStyle(Color.brandPink); VStack(alignment: .leading) { Text(auth.user?.name ?? "Stitchly maker").font(.headline); if let email = auth.user?.email { Text(email).font(.subheadline).foregroundStyle(.secondary) } } }.padding(.vertical, 8) }
+                Section("Your data") { Label("Private pattern storage", systemImage: "lock.shield.fill"); Label("Progress sync", systemImage: "arrow.triangle.2.circlepath") }
+                Section { Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right") { Task { await auth.signOut() } }; Button("Delete account", systemImage: "trash", role: .destructive) { confirmDelete = true } }
+                Section { LabeledContent("Version", value: "1.0.0"); Link("Privacy policy", destination: APIClient.baseURL.appending(path: "/privacy")); Link("Support", destination: APIClient.baseURL.appending(path: "/support")) }
+            }.navigationTitle("Account")
+                .confirmationDialog("Delete your Stitchly account?", isPresented: $confirmDelete, titleVisibility: .visible) { Button("Delete account and data", role: .destructive) { Task { do { try await auth.deleteAccount() } catch { deletionError = error.localizedDescription } } } } message: { Text("This permanently deletes your patterns, projects, notes, and sign-in connection.") }
+                .alert("Account wasn’t deleted", isPresented: .init(get: { deletionError != nil }, set: { if !$0 { deletionError = nil } })) { Button("OK") {} } message: { Text(deletionError ?? "") }
+        }
+    }
+}

@@ -1,0 +1,6 @@
+ios/DerivedData/
+ios/build/
+ios/*.xcodeproj/xcuserdata/
+credentials/
+references/
+.corpus/
