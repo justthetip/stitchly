@@ -24,6 +24,11 @@ final class Telemetry: NSObject, MXMetricManagerSubscriber, @unchecked Sendable 
     }
 
     func didReceive(_ payloads: [MXDiagnosticPayload]) {
-        track("metric_diagnostic_received", properties: ["payload_count": String(payloads.count)])
+        let crashCount = payloads.reduce(0) { $0 + ($1.crashDiagnostics?.count ?? 0) }
+        track("metric_diagnostic_received", properties: [
+            "payload_count": String(payloads.count),
+            "crash_count": String(crashCount),
+            "environment": "production",
+        ])
     }
 }

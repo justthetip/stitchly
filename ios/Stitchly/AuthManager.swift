@@ -12,6 +12,7 @@ import Security
     private let keychainKey = "native-session"
 
     init() {
+        if ProcessInfo.processInfo.arguments.contains("-resetAuthForUITests") { Keychain.delete(keychainKey) }
         token = Keychain.read(keychainKey)
         if ProcessInfo.processInfo.arguments.contains("-demo") {
             token = "demo"; user = User(id: "demo-user", name: "Luke", email: "luke@example.com")

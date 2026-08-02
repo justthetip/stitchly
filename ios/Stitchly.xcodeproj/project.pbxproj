@@ -10,6 +10,7 @@
 		13B65565E9D774D5AE4989D0 /* StitchlyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761106EF997B9870971DA39A /* StitchlyTests.swift */; };
 		1AD6D4C4287A840B0642360E /* StitchlyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35B38BE7439864A8B02638C /* StitchlyApp.swift */; };
 		4132819D1249F19AEB283B6B /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B5292D329738A085F62B463 /* AuthManager.swift */; };
+		463145A1B7737B67AA624168 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */; };
 		49D7B6650ED27275AB1BA9CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5F144145528B63171AD36E0E /* Assets.xcassets */; };
 		7AAECFC44F62BF501A381C43 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2816538EED2221611A1801B4 /* Models.swift */; };
 		93ADAD6FC413C6DB3C89814D /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815A74C9D4BBFC5D122B0928 /* AccountView.swift */; };
@@ -41,6 +42,7 @@
 		01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectViews.swift; sourceTree = "<group>"; };
 		2816538EED2221611A1801B4 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		2DB3E3A95E4217D5578C0845 /* StitchlyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchlyUITests.swift; sourceTree = "<group>"; };
+		4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		5F144145528B63171AD36E0E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		68EF58EA17CE4C75A76CA17C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		761106EF997B9870971DA39A /* StitchlyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchlyTests.swift; sourceTree = "<group>"; };
@@ -77,6 +79,7 @@
 				68EF58EA17CE4C75A76CA17C /* Info.plist */,
 				E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */,
 				2816538EED2221611A1801B4 /* Models.swift */,
+				4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */,
 				01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */,
 				C944A7AFC60449A5D4329DAB /* Stitchly.entitlements */,
 				F35B38BE7439864A8B02638C /* StitchlyApp.swift */,
@@ -219,6 +222,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				49D7B6650ED27275AB1BA9CC /* Assets.xcassets in Resources */,
+				463145A1B7737B67AA624168 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -307,7 +311,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -419,7 +423,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

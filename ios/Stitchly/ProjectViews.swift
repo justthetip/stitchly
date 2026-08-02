@@ -43,16 +43,16 @@ struct ReaderView: View {
         ZStack {
             LinearGradient(colors: [.cream.opacity(0.65), .white], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             VStack(spacing: 0) {
-                HStack { Text(current?.section ?? project.patternName ?? "Pattern").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary); Spacer(); Text("\(position) / \(max(instructions.count, project.totalInstructions ?? 1))").monospacedDigit().foregroundStyle(.secondary) }.padding()
-                ProgressView(value: Double(position), total: Double(max(instructions.count, project.totalInstructions ?? 1))).tint(.brandOrange).padding(.horizontal)
-                Spacer()
-                VStack(spacing: 18) {
-                    Text(current?.sourceLabel ?? "Step \(position)").font(.title3.weight(.semibold)).foregroundStyle(Color.brandPink)
-                    Text(current?.instructions ?? "Loading your next step…").font(.system(.title, design: .rounded, weight: .semibold)).multilineTextAlignment(.center).lineSpacing(8).minimumScaleFactor(0.72)
-                    if let stitchCount = current?.stitchCount { Label("\(stitchCount) stitches", systemImage: "number").font(.headline).foregroundStyle(Color.ink) }
-                    if let notes = current?.notes { Text(notes).font(.body).foregroundStyle(.secondary).padding().background(.thinMaterial, in: .rect(cornerRadius: 16)) }
-                }.padding(28)
-                Spacer()
+                HStack { Text(current?.section ?? project.patternName ?? "Pattern").font(.subheadline.weight(.semibold)).foregroundStyle(Color.ink); Spacer(); Text("\(position) / \(max(instructions.count, project.totalInstructions ?? 1))").monospacedDigit().foregroundStyle(Color.ink) }.padding()
+                ProgressView(value: Double(position), total: Double(max(instructions.count, project.totalInstructions ?? 1))).tint(.brandOrange).padding(.horizontal).accessibilityHidden(true)
+                ScrollView {
+                    VStack(spacing: 18) {
+                        Text(current?.sourceLabel ?? "Step \(position)").font(.title3.weight(.semibold)).foregroundStyle(Color.brandPink)
+                        Text(current?.instructions ?? "Loading your next step…").font(.system(.title, design: .rounded, weight: .semibold)).multilineTextAlignment(.center).lineSpacing(8)
+                        if let stitchCount = current?.stitchCount { Label("\(stitchCount) stitches", systemImage: "number").font(.headline).foregroundStyle(Color.ink) }
+                        if let notes = current?.notes { Text(notes).font(.body).foregroundStyle(.secondary).padding().background(.thinMaterial, in: .rect(cornerRadius: 16)) }
+                    }.frame(maxWidth: .infinity).padding(28)
+                }.defaultScrollAnchor(.center)
                 HStack(spacing: 18) {
                     Button { move(-1) } label: { Label("Previous", systemImage: "chevron.left").frame(maxWidth: .infinity) }.buttonStyle(.bordered).controlSize(.large).disabled(position <= 1)
                     Button { move(1) } label: { Label("Next", systemImage: "chevron.right").labelStyle(.titleAndIcon).frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).controlSize(.large).disabled(position >= max(instructions.count, project.totalInstructions ?? 1))

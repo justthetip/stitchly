@@ -8,7 +8,7 @@ import AuthenticationServices
 
 extension Color {
     static let brandOrange = Color(red: 1.0, green: 0.69, blue: 0.17)
-    static let brandPink = Color(red: 0.95, green: 0.47, blue: 0.56)
+    static let brandPink = Color(red: 0.76, green: 0.20, blue: 0.34)
     static let brandBlue = Color(red: 0.35, green: 0.76, blue: 0.92)
     static let ink = Color(red: 0.03, green: 0.18, blue: 0.35)
     static let cream = Color(red: 1.0, green: 0.96, blue: 0.87)
@@ -46,10 +46,14 @@ struct SignInView: View {
                         TextField("Email address", text: $email).textContentType(.emailAddress).textInputAutocapitalization(.never).keyboardType(.emailAddress).autocorrectionDisabled()
                         SecureField("Password", text: $password).textContentType(createAccount ? .newPassword : .password)
                     }.padding(16).background(.regularMaterial, in: .rect(cornerRadius: 18))
-                    Button { Task { await auth.authenticateWithEmail(email: email, password: password, name: createAccount ? name : nil, createAccount: createAccount) } } label: {
+                    Button {
+                        if canSubmit { Task { await auth.authenticateWithEmail(email: email, password: password, name: createAccount ? name : nil, createAccount: createAccount) } }
+                        else { auth.errorMessage = createAccount ? "Enter your name, a valid email address, and a password of at least 8 characters." : "Enter a valid email address and a password of at least 8 characters." }
+                    } label: {
                         Group { if auth.isWorking { ProgressView() } else { Text(createAccount ? "Create account" : "Sign in") } }.frame(maxWidth: .infinity)
-                    }.buttonStyle(.borderedProminent).controlSize(.large).disabled(!canSubmit || auth.isWorking)
-                    Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account") { withAnimation { createAccount.toggle() } }.font(.subheadline.weight(.semibold)).disabled(auth.isWorking)
+                    }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).disabled(auth.isWorking)
+                    Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account") { withAnimation { createAccount.toggle() } }
+                        .font(.subheadline.weight(.semibold)).tint(.ink).frame(minHeight: 44).contentShape(.rect).disabled(auth.isWorking)
                     HStack { Rectangle().frame(height: 1); Text("or").font(.footnote); Rectangle().frame(height: 1) }.foregroundStyle(.tertiary)
                     SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
                         .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(auth.isWorking)

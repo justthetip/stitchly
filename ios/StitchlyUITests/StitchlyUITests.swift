@@ -24,4 +24,23 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Wildflower Cardigan"].exists)
         XCTAssertTrue(app.buttons["Import"].isHittable)
     }
+
+    func testNativeAuthenticationScreenIsAccessible() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-resetAuthForUITests"]
+        app.launch()
+        XCTAssertTrue(app.textFields["Email address"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.secureTextFields["Password"].exists)
+        XCTAssertTrue(app.buttons["Sign in"].exists)
+        XCTAssertTrue(app.buttons["Continue with Apple"].exists)
+        try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
+    }
+
+    func testReaderPassesAccessibilityAudit() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-demo", "-readerDemo"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 5))
+        try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
+    }
 }
