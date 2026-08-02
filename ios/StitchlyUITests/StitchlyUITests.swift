@@ -53,4 +53,24 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 5))
         try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
     }
+
+    func testReaderExplainsItsLoadingState() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-demo", "-readerDemo", "-simulateSlowLoading"]
+        app.launch()
+        let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Opening your project'")).firstMatch
+        XCTAssertTrue(loading.waitForExistence(timeout: 3))
+        XCTAssertTrue(loading.label.contains("Loading pattern sections, your current step, and saved notes."))
+        XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 3))
+    }
+
+    func testLibraryExplainsItsLoadingState() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-demo", "-libraryDemo", "-simulateSlowLoading"]
+        app.launch()
+        let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Loading your library'")).firstMatch
+        XCTAssertTrue(loading.waitForExistence(timeout: 3))
+        XCTAssertTrue(loading.label.contains("Loading your pattern library…"))
+        XCTAssertTrue(app.staticTexts["Wildflower Cardigan"].waitForExistence(timeout: 3))
+    }
 }

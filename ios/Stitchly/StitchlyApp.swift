@@ -18,7 +18,8 @@ struct RootView: View {
     @EnvironmentObject private var auth: AuthManager
     var body: some View {
         Group {
-            if auth.user == nil { SignInView() }
+            if auth.isRestoring { LoadingStateView(title: "Opening Stitchly", message: "Restoring your secure session and syncing your account.") }
+            else if auth.user == nil { SignInView() }
             else if ProcessInfo.processInfo.arguments.contains("-patternDemo") { NavigationStack { PatternDetailView(pattern: DemoData.pattern) } }
             else if ProcessInfo.processInfo.arguments.contains("-readerSectionsDemo") { NavigationStack { ReaderView(project: DemoData.project, showSectionsInitially: true) } }
             else if ProcessInfo.processInfo.arguments.contains("-readerDemo") { NavigationStack { ReaderView(project: DemoData.project) } }
@@ -52,7 +53,8 @@ struct SignInView: View {
                         if canSubmit { Task { await auth.authenticateWithEmail(email: email, password: password, name: createAccount ? name : nil, createAccount: createAccount) } }
                         else { auth.errorMessage = createAccount ? "Enter your name, a valid email address, and a password of at least 8 characters." : "Enter a valid email address and a password of at least 8 characters." }
                     } label: {
-                        Group { if auth.isWorking { ProgressView() } else { Text(createAccount ? "Create account" : "Sign in") } }.frame(maxWidth: .infinity)
+                        if auth.isWorking { LoadingButtonLabel(createAccount ? "Creating your account…" : "Signing you in…") }
+                        else { Text(createAccount ? "Create account" : "Sign in").frame(maxWidth: .infinity) }
                     }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).disabled(auth.isWorking)
                     Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account") { withAnimation { createAccount.toggle() } }
                         .font(.subheadline.weight(.semibold)).tint(.ink).frame(minHeight: 44).contentShape(.rect).disabled(auth.isWorking)
@@ -86,6 +88,46 @@ struct MainTabs: View {
 struct EmptyState: View {
     let icon: String; let title: String; let message: String
     var body: some View { ContentUnavailableView(title, systemImage: icon, description: Text(message)) }
+}
+
+struct LoadingStateView: View {
+    let title: String
+    let message: String
+    var body: some View {
+        ContentUnavailableView {
+            ProgressView().controlSize(.large).tint(.ink).accessibilityHidden(true)
+            Text(title)
+        } description: {
+            Text(message)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(message)")
+    }
+}
+
+struct LoadingBanner: View {
+    let message: String
+    var body: some View {
+        HStack(spacing: 10) {
+            ProgressView().tint(.ink).accessibilityHidden(true)
+            Text(message).font(.subheadline.weight(.semibold)).foregroundStyle(Color.ink)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .background(.regularMaterial, in: .capsule)
+        .shadow(color: .black.opacity(0.10), radius: 12, y: 5)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(message)
+    }
+}
+
+struct LoadingButtonLabel: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+    var body: some View {
+        HStack { ProgressView().accessibilityHidden(true); Text(text) }.frame(maxWidth: .infinity)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(text)
+    }
 }
 
 struct CraftBadge: View {

@@ -8,6 +8,7 @@ import Security
     @Published private(set) var token: String?
     @Published var errorMessage: String?
     @Published var isWorking = false
+    @Published private(set) var isRestoring = false
     private var nonce: String?
     private let keychainKey = "native-session"
 
@@ -17,12 +18,14 @@ import Security
         if ProcessInfo.processInfo.arguments.contains("-demo") {
             token = "demo"; user = User(id: "demo-user", name: "Luke", email: "luke@example.com")
         }
+        isRestoring = token != nil && token != "demo"
     }
 
     var client: APIClient { APIClient(token: token) }
 
     func restore() async {
-        guard token != nil, token != "demo" else { return }
+        guard token != nil, token != "demo" else { isRestoring = false; return }
+        defer { isRestoring = false }
         do { let response: SessionResponse = try await client.request("/api/native-auth/session"); user = response.user }
         catch { signOutLocally() }
     }
@@ -58,8 +61,8 @@ import Security
         } catch { errorMessage = error.localizedDescription }
     }
 
-    func signOut() async { if token != "demo" { let _: EmptyResponse? = try? await client.request("/api/native-auth/session", method: "DELETE") }; signOutLocally() }
-    func deleteAccount() async throws { let _: EmptyResponse = try await client.request("/api/native-auth/account", method: "DELETE"); signOutLocally() }
+    func signOut() async { isWorking = true; defer { isWorking = false }; if token != "demo" { let _: EmptyResponse? = try? await client.request("/api/native-auth/session", method: "DELETE") }; signOutLocally() }
+    func deleteAccount() async throws { isWorking = true; defer { isWorking = false }; let _: EmptyResponse = try await client.request("/api/native-auth/account", method: "DELETE"); signOutLocally() }
     private func signOutLocally() { Keychain.delete(keychainKey); token = nil; user = nil }
     private static func sha256(_ value: String) -> String { SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined() }
     private static func randomNonce() -> String { (0..<32).compactMap { _ in "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._".randomElement() }.reduce("") { $0 + String($1) } }
