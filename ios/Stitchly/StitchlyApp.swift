@@ -16,17 +16,57 @@ extension Color {
 
 struct RootView: View {
     @EnvironmentObject private var auth: AuthManager
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("hasShownFirstLaunchSplash") private var hasShownFirstLaunchSplash = false
+    private var arguments: [String] { ProcessInfo.processInfo.arguments }
+    private var shouldShowOnboarding: Bool {
+        if arguments.contains("-skipOnboardingForUITests") { return false }
+        if arguments.contains("-onboardingDemo") { return !hasCompletedOnboarding }
+        return !hasCompletedOnboarding && auth.user == nil
+    }
     var body: some View {
         Group {
-            if auth.isRestoring { LoadingStateView(title: "Opening Stitchly", message: "Restoring your secure session and syncing your account.") }
+            if shouldShowFirstLaunchSplash { BrandedSplashView().task { await finishFirstLaunchSplash() } }
+            else if auth.isRestoring { LoadingStateView(title: "Opening Stitchly", message: "Restoring your secure session and syncing your account.") }
+            else if shouldShowOnboarding { OnboardingView { hasCompletedOnboarding = true } }
             else if auth.user == nil { SignInView() }
             else if ProcessInfo.processInfo.arguments.contains("-patternDemo") { NavigationStack { PatternDetailView(pattern: DemoData.pattern) } }
             else if ProcessInfo.processInfo.arguments.contains("-readerSectionsDemo") { NavigationStack { ReaderView(project: DemoData.project, showSectionsInitially: true) } }
             else if ProcessInfo.processInfo.arguments.contains("-readerDemo") { NavigationStack { ReaderView(project: DemoData.project) } }
             else { MainTabs() }
         }
+            .onAppear {
+                if arguments.contains("-resetOnboardingForUITests") { hasCompletedOnboarding = false }
+                if arguments.contains("-resetFirstLaunchSplashForUITests") { hasShownFirstLaunchSplash = false }
+            }
             .alert("Something went wrong", isPresented: .init(get: { auth.errorMessage != nil }, set: { if !$0 { auth.errorMessage = nil } })) { Button("OK") {} } message: { Text(auth.errorMessage ?? "Please try again.") }
             .onChange(of: auth.token, initial: true) { _, _ in Telemetry.shared.configure(client: auth.client) }
+    }
+
+    private var shouldShowFirstLaunchSplash: Bool {
+        !hasShownFirstLaunchSplash && !arguments.contains("-skipFirstLaunchSplashForUITests")
+    }
+
+    private func finishFirstLaunchSplash() async {
+        try? await Task.sleep(for: BrandedSplashView.minimumDuration)
+        hasShownFirstLaunchSplash = true
+    }
+}
+
+struct BrandedSplashView: View {
+    static let minimumDuration = Duration.seconds(3)
+    var body: some View {
+        ZStack {
+            Color("LaunchBackground").ignoresSafeArea()
+            Image("LaunchIcon")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 240, height: 240)
+                .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Opening Stitchly")
+        .accessibilityIdentifier("branded-splash")
     }
 }
 
@@ -75,12 +115,13 @@ struct SignInView: View {
 }
 
 struct MainTabs: View {
-    @State private var selection = ProcessInfo.processInfo.arguments.contains("-libraryDemo") ? 1 : 0
+    @State private var selection = ProcessInfo.processInfo.arguments.contains("-libraryDemo") ? 2 : (ProcessInfo.processInfo.arguments.contains("-projectsDemo") ? 1 : 0)
     var body: some View {
         TabView(selection: $selection) {
-            Tab("Projects", systemImage: "square.stack.3d.up.fill", value: 0) { ProjectsView() }
-            Tab("Library", systemImage: "books.vertical.fill", value: 1) { LibraryView() }
-            Tab("Account", systemImage: "person.crop.circle.fill", value: 2) { AccountView() }
+            Tab("Home", systemImage: "house.fill", value: 0) { HomeView { selection = 1 } }
+            Tab("Projects", systemImage: "square.stack.3d.up.fill", value: 1) { ProjectsView() }
+            Tab("Library", systemImage: "books.vertical.fill", value: 2) { LibraryView() }
+            Tab("Account", systemImage: "person.crop.circle.fill", value: 3) { AccountView() }
         }
     }
 }
@@ -88,6 +129,50 @@ struct MainTabs: View {
 struct EmptyState: View {
     let icon: String; let title: String; let message: String
     var body: some View { ContentUnavailableView(title, systemImage: icon, description: Text(message)) }
+}
+
+struct ActionableEmptyState: View {
+    let icon: String
+    let title: String
+    let message: String
+    let actionTitle: String
+    let actionIcon: String
+    let isDisabled: Bool
+    let action: () -> Void
+    var secondaryActionTitle: String? = nil
+    var secondaryActionIcon: String? = nil
+    var secondaryAction: (() -> Void)? = nil
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(title, systemImage: icon)
+        } description: {
+            Text(message)
+        } actions: {
+            Button(action: action) {
+                Label(actionTitle, systemImage: actionIcon)
+                    .font(.headline)
+                    .frame(minWidth: 180)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.ink)
+            .controlSize(.large)
+            .disabled(isDisabled)
+            .accessibilityIdentifier("empty-state-primary-action")
+            if let secondaryActionTitle, let secondaryAction {
+                Button(action: secondaryAction) {
+                    Label(secondaryActionTitle, systemImage: secondaryActionIcon ?? "doc.badge.plus")
+                        .font(.headline)
+                        .frame(minWidth: 180)
+                }
+                .buttonStyle(.bordered)
+                .tint(.ink)
+                .controlSize(.large)
+                .disabled(isDisabled)
+                .accessibilityIdentifier("empty-state-secondary-action")
+            }
+        }
+    }
 }
 
 struct LoadingStateView: View {

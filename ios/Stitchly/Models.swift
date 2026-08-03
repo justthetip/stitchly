@@ -14,6 +14,7 @@ struct Pattern: Codable, Identifiable, Hashable, Sendable {
     let totalInstructions: Int
     let source: String
     let pageCount: Int?
+    var coverUrl: String? = nil
 }
 
 struct Instruction: Codable, Identifiable, Hashable, Sendable {
@@ -26,6 +27,11 @@ struct Instruction: Codable, Identifiable, Hashable, Sendable {
     let notes: String?
     let stitchCount: Int?
     let optional: Bool
+    let confidence: String?
+
+    init(id: String, position: Int, section: String, instructionKind: String, sourceLabel: String?, instructions: String, notes: String?, stitchCount: Int?, optional: Bool, confidence: String? = nil) {
+        self.id = id; self.position = position; self.section = section; self.instructionKind = instructionKind; self.sourceLabel = sourceLabel; self.instructions = instructions; self.notes = notes; self.stitchCount = stitchCount; self.optional = optional; self.confidence = confidence
+    }
 }
 
 struct PatternSection: Identifiable, Hashable, Sendable {
@@ -61,6 +67,14 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
     let patternName: String?
     let totalInstructions: Int?
     let craft: String?
+    let startedAt: Date?
+    let lastWorkedAt: Date?
+    let completedAt: Date?
+    let coverUrl: String?
+
+    init(id: String, patternId: String, name: String, status: String, yarn: String?, currentInstruction: Int, patternName: String?, totalInstructions: Int?, craft: String?, startedAt: Date? = nil, lastWorkedAt: Date? = nil, completedAt: Date? = nil, coverUrl: String? = nil) {
+        self.id = id; self.patternId = patternId; self.name = name; self.status = status; self.yarn = yarn; self.currentInstruction = currentInstruction; self.patternName = patternName; self.totalInstructions = totalInstructions; self.craft = craft; self.startedAt = startedAt; self.lastWorkedAt = lastWorkedAt; self.completedAt = completedAt; self.coverUrl = coverUrl
+    }
 }
 
 struct ProjectNote: Codable, Identifiable, Sendable {
@@ -71,9 +85,10 @@ struct ProjectNote: Codable, Identifiable, Sendable {
 }
 
 struct PatternListResponse: Codable { let patterns: [Pattern] }
-struct PatternResponse: Codable { let pattern: Pattern; let instructions: [Instruction] }
+struct PatternResponse: Codable { let pattern: Pattern; let instructions: [Instruction]; var alreadyAdded: Bool? = nil }
 struct ProjectListResponse: Codable { let projects: [Project] }
 struct ProjectResponse: Codable { let project: Project; let instructions: [Instruction]; let notes: [ProjectNote] }
+struct ProjectCreationResponse: Codable { let project: Project; let isFirstProject: Bool }
 struct UploadTokenResponse: Codable { let clientToken: String }
 struct BlobResponse: Codable { let url: URL }
 
@@ -88,4 +103,5 @@ enum DemoData {
         Instruction(id: "i6", position: 6, section: "Sleeves", instructionKind: "setup", sourceLabel: "Cuff", instructions: "Work the cuff ribbing to the required wrist measurement.", notes: "Make two matching sleeves.", stitchCount: nil, optional: false)
     ]
     static let project = Project(id: "project-demo", patternId: pattern.id, name: "My coral cardigan", status: "active", yarn: "Coral merino blend", currentInstruction: 2, patternName: pattern.name, totalInstructions: 18, craft: "crochet")
+    static let notes = [ProjectNote(id: "note-demo", instructionPosition: 2, body: "Used the coral marker at the side seam.", createdAt: Date(timeIntervalSince1970: 1_753_084_800))]
 }

@@ -2,6 +2,7 @@ import { get } from "@vercel/blob";
 import { extractText, getDocumentProxy } from "unpdf";
 import { db, type DbPattern, type DbPatternInstruction } from "@/lib/db";
 import { parsePatternText } from "@/lib/pattern-parser";
+import { createPrivatePatternCover } from "@/lib/pattern-cover";
 import { apiError, requireUser } from "@/lib/session";
 
 export const maxDuration = 60;
@@ -52,7 +53,17 @@ export async function POST(request: Request) {
       await sql`delete from public.patterns where id = ${pattern.id} and owner_id = ${user.id}`;
       throw error;
     }
+    let coverUrl: string | null = null;
+    try {
+      const coverBlobUrl = await createPrivatePatternCover(pdf, user.id, pattern.id);
+      if (coverBlobUrl) {
+        await sql`update public.patterns set cover_blob_url = ${coverBlobUrl}, updated_at = now() where id = ${pattern.id} and owner_id = ${user.id}`;
+        coverUrl = `/api/patterns/${pattern.id}/cover`;
+      }
+    } catch {
+      // Optional enhancement: image-free, encrypted, or malformed artwork must not fail text import.
+    }
     const instructions = await sql`select id, pattern_id, position, section, section_quantity, section_position, instruction_kind, source_label, instruction_number, instruction_number_end, instructions, notes, stitch_count, optional, source_group, confidence from public.pattern_instructions where pattern_id = ${pattern.id} order by position` as DbPatternInstruction[];
-    return Response.json({ pattern, sections: parsed.sections, instructions }, { status: 201 });
+    return Response.json({ pattern: { ...pattern, cover_url: coverUrl }, sections: parsed.sections, instructions }, { status: 201 });
   } catch (error) { return apiError(error); }
 }

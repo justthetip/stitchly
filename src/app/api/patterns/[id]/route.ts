@@ -5,7 +5,7 @@ import { apiError, requireUser } from "@/lib/session";
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser(); const { id } = await params; const sql = db();
-    const patterns = await sql`select id, owner_id, name, designer, craft, difficulty, yarn, tool, total_instructions, source, blob_url, page_count, created_at, updated_at from public.patterns where id = ${id} and owner_id = ${user.id}` as DbPattern[];
+    const patterns = await sql`select id, owner_id, name, designer, craft, difficulty, yarn, tool, total_instructions, source, blob_url, page_count, created_at, updated_at, case when cover_blob_url is not null then '/api/patterns/' || id || '/cover' else null end as cover_url from public.patterns where id = ${id} and owner_id = ${user.id}` as DbPattern[];
     if (!patterns[0]) return Response.json({ error: "Pattern not found" }, { status: 404 });
     const instructions = await sql`select id, pattern_id, position, section, section_quantity, section_position, instruction_kind, source_label, instruction_number, instruction_number_end, instructions, notes, stitch_count, optional, source_group, confidence from public.pattern_instructions where pattern_id = ${id} order by position` as DbPatternInstruction[];
     return Response.json({ pattern: patterns[0], instructions });
@@ -75,9 +75,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser(); const { id } = await params; const sql = db();
-    const deleted = await sql`delete from public.patterns where id = ${id} and owner_id = ${user.id} returning id, blob_url` as Array<{ id: string; blob_url: string | null }>;
-    if (!deleted[0]) return Response.json({ error: "Pattern not found" }, { status: 404 });
-    if (deleted[0].blob_url) await del(deleted[0].blob_url);
+    const patterns = await sql`select id, blob_url, cover_blob_url from public.patterns where id = ${id} and owner_id = ${user.id}` as Array<{ id: string; blob_url: string | null; cover_blob_url: string | null }>;
+    if (!patterns[0]) return Response.json({ error: "Pattern not found" }, { status: 404 });
+    await sql.transaction([
+      sql`delete from public.projects where pattern_id = ${id} and owner_id = ${user.id}`,
+      sql`delete from public.patterns where id = ${id} and owner_id = ${user.id}`,
+    ]);
+    const assetUrls = [patterns[0].blob_url, patterns[0].cover_blob_url].filter((url): url is string => Boolean(url));
+    if (assetUrls.length) await del(assetUrls);
     return new Response(null, { status: 204 });
   } catch (error) { return apiError(error); }
 }

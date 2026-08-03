@@ -9,7 +9,6 @@ struct AccountView: View {
         NavigationStack {
             List {
                 Section { HStack(spacing: 14) { Image(systemName: "person.crop.circle.fill").font(.system(size: 48)).foregroundStyle(Color.brandPink); VStack(alignment: .leading) { Text(auth.user?.name ?? "Stitchly maker").font(.headline); if let email = auth.user?.email { Text(email).font(.subheadline).foregroundStyle(.secondary) } } }.padding(.vertical, 8) }
-                Section("Your data") { Label("Private pattern storage", systemImage: "lock.shield.fill"); Label("Progress sync", systemImage: "arrow.triangle.2.circlepath") }
                 Section { Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right") { operationMessage = "Signing out and closing your secure session…"; Task { await auth.signOut() } }.disabled(auth.isWorking); Button("Delete account", systemImage: "trash", role: .destructive) { confirmDelete = true }.disabled(auth.isWorking) }
                 Section { LabeledContent("Version", value: "1.0.0"); Link("Privacy policy", destination: APIClient.baseURL.appending(path: "/privacy")); Link("Support", destination: APIClient.baseURL.appending(path: "/support")) }
             }.navigationTitle("Account")

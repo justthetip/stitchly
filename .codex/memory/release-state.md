@@ -8,10 +8,11 @@ This file is a navigation aid, not authority. Re-query external systems before c
 
 - Repository branch `main` includes commit `2954968` with informative native loading states.
 - GitHub Quality run `30771052685` completed successfully for web and iOS.
-- App Store build 10 processed as `VALID` and is present in both internal and external TestFlight groups with loading-state test notes.
-- App Store version 1.0 was observed as `WAITING_FOR_REVIEW` with build 9 selected. Apple rejected attempts to replace the selected binary while that state was active; the submission was intentionally left untouched.
+- App Store builds 11–16 processed as `VALID`. Builds 11 through 16 are available to the `Stitchly Internal` TestFlight group with checkpoint-specific testing notes; build 16 adds native project/pattern deletion and ships alongside the live PDF-cover repair/backfill.
+- App Store version 1.0 was observed as `WAITING_FOR_REVIEW` with build 10 selected. The submission was intentionally left untouched while build 16 was released only to the internal TestFlight group.
 - Five 6.7-inch App Store screenshots are uploaded, including pattern overview and section navigation.
-- Linear issue LUK-81 is Done. LUK-75 remains in progress while App Review is monitored.
+- The canonical Vercel production alias includes authenticated representative PDF cover extraction and the owner-scoped starter-pattern endpoint. The raw-image thumbnail bug was repaired and all seven existing PDF patterns were backfilled successfully. Neon migrations 005 and 006 were verified on the linked branch.
+- Linear issues LUK-88, LUK-91, LUK-92, and LUK-93 are In Review. LUK-75 remains in progress while App Review is monitored.
 
 ## Next release checks
 

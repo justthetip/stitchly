@@ -34,6 +34,14 @@ struct APIClient: Sendable {
         return try decoder.decode(T.self, from: data)
     }
 
+    func imageData(_ path: String) async throws -> Data {
+        var request = URLRequest(url: Self.baseURL.appending(path: path))
+        if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else { throw APIError.invalidResponse }
+        return data
+    }
+
     func uploadPDF(_ fileURL: URL, userID: String) async throws -> BlobResponse {
         let access = fileURL.startAccessingSecurityScopedResource(); defer { if access { fileURL.stopAccessingSecurityScopedResource() } }
         let data = try Data(contentsOf: fileURL)

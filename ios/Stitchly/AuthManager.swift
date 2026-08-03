@@ -14,6 +14,9 @@ import Security
 
     init() {
         if ProcessInfo.processInfo.arguments.contains("-resetAuthForUITests") { Keychain.delete(keychainKey) }
+        if ProcessInfo.processInfo.arguments.contains("-resetDemoReaderProgressForUITests") {
+            UserDefaults.standard.set(DemoData.project.currentInstruction, forKey: "demoReaderPosition")
+        }
         token = Keychain.read(keychainKey)
         if ProcessInfo.processInfo.arguments.contains("-demo") {
             token = "demo"; user = User(id: "demo-user", name: "Luke", email: "luke@example.com")

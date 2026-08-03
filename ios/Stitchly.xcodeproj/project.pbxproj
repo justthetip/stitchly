@@ -12,12 +12,15 @@
 		4132819D1249F19AEB283B6B /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B5292D329738A085F62B463 /* AuthManager.swift */; };
 		463145A1B7737B67AA624168 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */; };
 		49D7B6650ED27275AB1BA9CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5F144145528B63171AD36E0E /* Assets.xcassets */; };
+		6FC376CE71AA58E992857736 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BF2580FCC98BF2993759CA97 /* LaunchScreen.storyboard */; };
 		7AAECFC44F62BF501A381C43 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2816538EED2221611A1801B4 /* Models.swift */; };
 		93ADAD6FC413C6DB3C89814D /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815A74C9D4BBFC5D122B0928 /* AccountView.swift */; };
+		9B429D4021B14992165E876F /* ReviewPromptPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA911B0FB4FCFA1FCD537052 /* ReviewPromptPolicy.swift */; };
 		9D18D04834E28D5F7B6F7204 /* StitchlyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB3E3A95E4217D5578C0845 /* StitchlyUITests.swift */; };
 		BAF7C2DEF383F1C6B39FD9EB /* LibraryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */; };
 		BCDAAAB1E28B9386A5B06621 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83F84F149B7E2B4A0682623D /* Telemetry.swift */; };
 		BE8B60903D55DFC210A87738 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E0C769A63C577B2B309AD2 /* APIClient.swift */; };
+		E57F10F94BAFCC1C429E1253 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF0001CD284F0E186D51EF85 /* OnboardingView.swift */; };
 		E956EED2D8BEB4E1BD75A197 /* ProjectViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */; };
 /* End PBXBuildFile section */
 
@@ -51,7 +54,10 @@
 		83F84F149B7E2B4A0682623D /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
 		9B5292D329738A085F62B463 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		B32F63E003499D6CC7AE4A51 /* Stitchly.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Stitchly.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BF2580FCC98BF2993759CA97 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C944A7AFC60449A5D4329DAB /* Stitchly.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Stitchly.entitlements; sourceTree = "<group>"; };
+		CA911B0FB4FCFA1FCD537052 /* ReviewPromptPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewPromptPolicy.swift; sourceTree = "<group>"; };
+		CF0001CD284F0E186D51EF85 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		E1E0C769A63C577B2B309AD2 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViews.swift; sourceTree = "<group>"; };
 		E5FAA1B8DE263DC7D95E86EF /* StitchlyUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = StitchlyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -77,10 +83,13 @@
 				5F144145528B63171AD36E0E /* Assets.xcassets */,
 				9B5292D329738A085F62B463 /* AuthManager.swift */,
 				68EF58EA17CE4C75A76CA17C /* Info.plist */,
+				BF2580FCC98BF2993759CA97 /* LaunchScreen.storyboard */,
 				E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */,
 				2816538EED2221611A1801B4 /* Models.swift */,
+				CF0001CD284F0E186D51EF85 /* OnboardingView.swift */,
 				4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */,
 				01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */,
+				CA911B0FB4FCFA1FCD537052 /* ReviewPromptPolicy.swift */,
 				C944A7AFC60449A5D4329DAB /* Stitchly.entitlements */,
 				F35B38BE7439864A8B02638C /* StitchlyApp.swift */,
 				83F84F149B7E2B4A0682623D /* Telemetry.swift */,
@@ -222,6 +231,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				49D7B6650ED27275AB1BA9CC /* Assets.xcassets in Resources */,
+				6FC376CE71AA58E992857736 /* LaunchScreen.storyboard in Resources */,
 				463145A1B7737B67AA624168 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -254,7 +264,9 @@
 				4132819D1249F19AEB283B6B /* AuthManager.swift in Sources */,
 				BAF7C2DEF383F1C6B39FD9EB /* LibraryViews.swift in Sources */,
 				7AAECFC44F62BF501A381C43 /* Models.swift in Sources */,
+				E57F10F94BAFCC1C429E1253 /* OnboardingView.swift in Sources */,
 				E956EED2D8BEB4E1BD75A197 /* ProjectViews.swift in Sources */,
+				9B429D4021B14992165E876F /* ReviewPromptPolicy.swift in Sources */,
 				1AD6D4C4287A840B0642360E /* StitchlyApp.swift in Sources */,
 				BCDAAAB1E28B9386A5B06621 /* Telemetry.swift in Sources */,
 			);
@@ -311,7 +323,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -423,7 +435,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

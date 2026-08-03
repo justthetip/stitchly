@@ -21,6 +21,7 @@ export type DbPattern = {
   page_count: number | null;
   created_at: string;
   updated_at: string;
+  cover_blob_url?: string | null;
 };
 
 export type DbPatternInstruction = {
@@ -56,4 +57,5 @@ export type DbProject = {
   pattern_name?: string;
   total_instructions?: number;
   craft?: "knit" | "crochet";
+  cover_url?: string | null;
 };
