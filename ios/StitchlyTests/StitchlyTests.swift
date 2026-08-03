@@ -12,6 +12,21 @@ struct StitchlyTests {
         #expect(sections.map(\.firstPosition) == [1, 4, 6])
         #expect(sections[0].lastPosition == 3)
     }
+    @Test func repeatedRowRangesBecomeOneReaderStepWithTheWorkedRepeatCount() {
+        let repeatedRows = (9...72).map { row in
+            Instruction(
+                id: "row-\(row)", position: row, section: "Headband", instructionKind: "row",
+                sourceLabel: "Rows 9–72", instructions: "Repeat Rows 7–8 thirty-two times, or until the work comfortably wraps around your head.",
+                notes: nil, stitchCount: 18, optional: false, instructionNumber: row,
+                instructionNumberEnd: 72, sourceGroup: "row:9-72"
+            )
+        }
+        let steps = repeatedRows.readerSteps
+        #expect(steps.count == 1)
+        #expect(steps[0].firstPosition == 9)
+        #expect(steps[0].lastPosition == 72)
+        #expect(steps[0].repeatCount == 32)
+    }
     @Test func patternLibrarySearchAndCraftFiltersCompose() {
         let knit = Pattern(id: "knit", name: "Coastal Cardigan", designer: "Mina Moss", craft: "knit", difficulty: nil, yarn: nil, tool: nil, totalInstructions: 10, source: "PDF", pageCount: 4)
         let crochet = Pattern(id: "crochet", name: "Garden Wrap", designer: "Coastal Studio", craft: "crochet", difficulty: nil, yarn: nil, tool: nil, totalInstructions: 8, source: "PDF", pageCount: 3)

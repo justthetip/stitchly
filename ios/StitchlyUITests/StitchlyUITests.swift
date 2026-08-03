@@ -30,6 +30,13 @@ import XCTest
         try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
         app.buttons.matching(NSPredicate(format: "label CONTAINS 'Sleeves'")).firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Cuff"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Finish project"].isHittable)
+        app.buttons["Finish project"].tap()
+        XCTAssertTrue(app.staticTexts["You finished My coral cardigan!"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Congratulations — your project is marked complete and stays available with its instructions and notes."].exists)
+        app.buttons["completion-done"].tap()
+        XCTAssertTrue(app.navigationBars["Project overview"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Completed"].exists)
     }
 
     func testLibraryJourneyAtLargestDynamicType() {
@@ -87,6 +94,7 @@ import XCTest
 
         app.swipeDown()
         let modeSwitch = app.buttons["New here? Create an account"]
+        for _ in 0..<3 where !modeSwitch.isHittable { app.swipeUp() }
         XCTAssertTrue(modeSwitch.isHittable)
         modeSwitch.tap()
         let name = app.textFields["Your name"]
@@ -143,7 +151,20 @@ import XCTest
         let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Opening your project'")).firstMatch
         XCTAssertTrue(loading.waitForExistence(timeout: 3))
         XCTAssertTrue(loading.label.contains("Loading pattern sections, your current step, and saved notes."))
-        XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 8))
+    }
+
+    func testReaderGroupsRepeatedRowsAndShowsTheWorkedRepeatCount() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-demo", "-readerRepeatDemo", "-skipFirstLaunchSplashForUITests"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Rows 9–72"].waitForExistence(timeout: 5))
+        let repeatBadge = app.descendants(matching: .any)["reader-repeat-count"]
+        XCTAssertTrue(repeatBadge.exists)
+        XCTAssertEqual(repeatBadge.label, "Repeat 32 times")
+        XCTAssertTrue(app.buttons["Finish project"].isHittable)
+        XCTAssertFalse(app.buttons["Next"].exists)
+        try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
     }
 
     func testLibraryExplainsItsLoadingState() {

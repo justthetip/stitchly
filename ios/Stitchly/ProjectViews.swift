@@ -78,7 +78,9 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("Home")
-            .navigationDestination(for: Project.self) { ReaderView(project: $0) }
+            .navigationDestination(for: Project.self) { project in
+                ReaderView(project: project) { Task { await store.load(client: auth.client) } }
+            }
             .task { await store.load(client: auth.client) }
             .refreshable { await store.load(client: auth.client) }
             .overlay(alignment: .top) { if store.isLoading && store.activeProject != nil { LoadingBanner(message: "Refreshing your current project and saved step…").padding(.top, 8) } }
@@ -211,7 +213,12 @@ struct ProjectOverviewView: View {
                 }.padding(.vertical, 8)
             }
             Section {
-                NavigationLink { ReaderView(project: project, exitTitle: "Project") } label: { Label(isCompleted ? "Review instructions" : "Continue project", systemImage: "play.fill") }
+                NavigationLink {
+                    ReaderView(project: project, exitTitle: "Project") {
+                        isCompleted = true
+                        onUpdated()
+                    }
+                } label: { Label(isCompleted ? "Review instructions" : "Continue project", systemImage: "play.fill") }
                     .accessibilityIdentifier("continue-project")
                 Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext") }
                     .accessibilityIdentifier("project-original-pdf")
@@ -252,22 +259,42 @@ struct ReaderView: View {
     @State private var isLoading = true
     @State private var isSavingProgress = false
     @State private var isSavingNote = false
+    @State private var isCompletingProject = false
+    @State private var showCompletion = false
+    @State private var hasCompletedProject: Bool
     @State private var shouldExitAfterSave = false
     @State private var readerError: String?
     let exitTitle: String
-    init(project: Project, showSectionsInitially: Bool = false, exitTitle: String = "Projects") {
+    let onCompleted: () -> Void
+    init(project: Project, showSectionsInitially: Bool = false, exitTitle: String = "Projects", onCompleted: @escaping () -> Void = {}) {
         self.project = project
         self.exitTitle = exitTitle
+        self.onCompleted = onCompleted
         _position = State(initialValue: project.currentInstruction)
         _showSections = State(initialValue: showSectionsInitially)
+        _hasCompletedProject = State(initialValue: project.status == "completed")
     }
-    var current: Instruction? { instructions.first { $0.position == position } ?? instructions.first }
+    var steps: [ReaderStep] { instructions.readerSteps }
+    var currentStepIndex: Int { steps.firstIndex { position >= $0.firstPosition && position <= $0.lastPosition } ?? 0 }
+    var currentStep: ReaderStep? { steps.indices.contains(currentStepIndex) ? steps[currentStepIndex] : nil }
+    var current: Instruction? { currentStep?.instruction }
+    var isAtLastStep: Bool { !steps.isEmpty && currentStepIndex == steps.count - 1 }
     var body: some View {
         ZStack {
             LinearGradient(colors: [.cream.opacity(0.65), .white], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             VStack(spacing: 0) {
-                HStack { Text(current?.section ?? project.patternName ?? "Pattern").font(.subheadline.weight(.semibold)).foregroundStyle(Color.ink); Spacer(); Text("\(position) / \(max(instructions.count, project.totalInstructions ?? 1))").monospacedDigit().foregroundStyle(Color.ink) }.padding()
-                ProgressView(value: Double(position), total: Double(max(instructions.count, project.totalInstructions ?? 1))).tint(.brandOrange).padding(.horizontal).accessibilityHidden(true)
+                HStack {
+                    Text(current?.section ?? project.patternName ?? "Pattern").font(.subheadline.weight(.semibold)).foregroundStyle(Color.ink)
+                    Spacer()
+                    Text("Step \(currentStepIndex + 1) of \(max(steps.count, 1))")
+                        .font(.subheadline.bold())
+                        .monospacedDigit()
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.white, in: .capsule)
+                }.padding()
+                ProgressView(value: Double(currentStepIndex + 1), total: Double(max(steps.count, 1))).tint(.brandOrange).padding(.horizontal).accessibilityHidden(true)
                 if isLoading {
                     LoadingStateView(title: "Opening your project", message: "Loading pattern sections, your current step, and saved notes.")
                 } else { ScrollView {
@@ -280,13 +307,36 @@ struct ReaderView: View {
                             .lineSpacing(8)
                             .padding(20)
                             .background(Color.white, in: .rect(cornerRadius: 20))
+                        if let repeatCount = currentStep?.repeatCount {
+                            Label("×\(repeatCount) repeats", systemImage: "repeat")
+                                .font(.title3.weight(.bold))
+                                .foregroundStyle(Color.ink)
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 12)
+                                .background(Color.brandOrange.opacity(0.2), in: .capsule)
+                                .accessibilityLabel("Repeat \(repeatCount) times")
+                                .accessibilityIdentifier("reader-repeat-count")
+                        }
                         if let stitchCount = current?.stitchCount { Label("\(stitchCount) stitches", systemImage: "number").font(.headline).foregroundStyle(Color.ink) }
-                        if let notes = current?.notes { Text(notes).font(.body).foregroundStyle(.secondary).padding().background(.thinMaterial, in: .rect(cornerRadius: 16)) }
+                        if let notes = current?.notes {
+                            Text(notes)
+                                .font(.body)
+                                .foregroundStyle(Color.ink)
+                                .padding()
+                                .background(Color.cream, in: .rect(cornerRadius: 16))
+                        }
                     }.frame(maxWidth: .infinity).padding(28)
                 }.defaultScrollAnchor(.center) }
                 HStack(spacing: 18) {
-                    Button { move(-1) } label: { Label("Previous", systemImage: "chevron.left").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).disabled(isLoading || isSavingProgress || position <= 1)
-                    Button { move(1) } label: { Label("Next", systemImage: "chevron.right").labelStyle(.titleAndIcon).frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).disabled(isLoading || isSavingProgress || position >= max(instructions.count, project.totalInstructions ?? 1))
+                    if currentStepIndex > 0 {
+                        Button { move(-1) } label: { Label("Previous", systemImage: "chevron.left").frame(maxWidth: .infinity) }
+                            .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
+                            .disabled(isLoading || isSavingProgress || isCompletingProject)
+                    }
+                    Button { advance() } label: {
+                        Label(isAtLastStep ? (hasCompletedProject ? "Done" : "Finish project") : "Next", systemImage: isAtLastStep ? "checkmark.circle.fill" : "chevron.right")
+                            .labelStyle(.titleAndIcon).frame(maxWidth: .infinity)
+                    }.buttonStyle(.borderedProminent).tint(isAtLastStep ? .brandPink : .ink).controlSize(.large).disabled(isLoading || isSavingProgress || isCompletingProject || steps.isEmpty)
                 }.padding()
             }
         }.navigationTitle(project.name).navigationBarTitleDisplayMode(.inline).navigationBarBackButtonHidden(true).toolbar {
@@ -311,6 +361,7 @@ struct ReaderView: View {
         }.toolbar(.hidden, for: .tabBar)
             .sheet(isPresented: $showSections) { sectionNavigator }
             .sheet(isPresented: $showOriginal) { OriginalPDFView(patternID: project.patternId, title: project.patternName ?? "Original pattern") }
+            .sheet(isPresented: $showCompletion) { completionView }
             .sheet(isPresented: $showNotes) { NavigationStack { Form { TextEditor(text: $note).frame(minHeight: 160); if isSavingNote { Section { LoadingBanner(message: "Saving this note to step \(position)…").frame(maxWidth: .infinity) } } }.navigationTitle("Step note").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showNotes = false }.disabled(isSavingNote) }; ToolbarItem(placement: .confirmationAction) { Button { Task { await saveNote() } } label: { if isSavingNote { ProgressView().accessibilityLabel("Saving note") } else { Text("Save") } }.disabled(isSavingNote || note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) } } } }
             .task { await loadReader() }
             .onChange(of: isSavingProgress) { _, saving in
@@ -319,7 +370,10 @@ struct ReaderView: View {
                     dismiss()
                 }
             }
-            .overlay(alignment: .top) { if isSavingProgress { LoadingBanner(message: "Saving your place at step \(position)…").padding(.top, 8) } }
+            .overlay(alignment: .top) {
+                if isCompletingProject { LoadingBanner(message: "Finishing your project and marking it complete…").padding(.top, 8) }
+                else if isSavingProgress { LoadingBanner(message: "Saving your place at step \(position)…").padding(.top, 8) }
+            }
             .alert("Couldn’t update your project", isPresented: .init(get: { readerError != nil }, set: { if !$0 { readerError = nil } })) { Button("OK") {} } message: { Text(readerError ?? "") }
     }
     private func exitReader() {
@@ -339,7 +393,7 @@ struct ReaderView: View {
                             .foregroundStyle(Color.brandPink)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(section.title).font(.headline).foregroundStyle(.primary)
-                            Text("Steps \(section.firstPosition)–\(section.lastPosition) · \(section.instructions.count) instructions").font(.subheadline).foregroundStyle(Color.ink)
+                            Text("Steps \(section.firstPosition)–\(section.lastPosition) · \(section.instructions.readerSteps.count) reader steps").font(.subheadline).foregroundStyle(Color.ink)
                         }
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Color.ink)
@@ -363,10 +417,75 @@ struct ReaderView: View {
         .presentationDetents([.medium, .large])
         .presentationBackground(Color(.systemBackground))
     }
-    private func move(_ delta: Int) { position = min(max(position + delta, 1), max(instructions.count, project.totalInstructions ?? 1)); Task { await persistProgress() } }
-    private func loadReader() async { Telemetry.shared.track("reader_opened"); isLoading = true; defer { isLoading = false }; if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }; if auth.token == "demo" { instructions = DemoData.instructions; let savedPosition = UserDefaults.standard.integer(forKey: "demoReaderPosition"); position = savedPosition > 0 ? savedPosition : project.currentInstruction; return }; do { let response: ProjectResponse = try await auth.client.request("/api/projects/\(project.id)"); instructions = response.instructions } catch { readerError = error.localizedDescription } }
+    private func move(_ delta: Int) {
+        let destination = min(max(currentStepIndex + delta, 0), max(steps.count - 1, 0))
+        guard steps.indices.contains(destination) else { return }
+        position = steps[destination].firstPosition
+        Task { await persistProgress() }
+    }
+    private func advance() {
+        guard isAtLastStep else { move(1); return }
+        if hasCompletedProject { showCompletion = true }
+        else { Task { await completeProject() } }
+    }
+    private func loadReader() async { Telemetry.shared.track("reader_opened"); isLoading = true; defer { isLoading = false }; if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }; if auth.token == "demo" { if ProcessInfo.processInfo.arguments.contains("-readerRepeatDemo") { instructions = DemoData.repeatInstructions; position = DemoData.repeatProject.currentInstruction; return }; instructions = DemoData.instructions; let savedPosition = UserDefaults.standard.integer(forKey: "demoReaderPosition"); position = savedPosition > 0 ? savedPosition : project.currentInstruction; return }; do { let response: ProjectResponse = try await auth.client.request("/api/projects/\(project.id)"); instructions = response.instructions } catch { readerError = error.localizedDescription } }
     private func persistProgress() async { if auth.token == "demo" { UserDefaults.standard.set(position, forKey: "demoReaderPosition"); return }; isSavingProgress = true; defer { isSavingProgress = false }; struct Body: Encodable { let currentInstruction: Int }; do { let _: EmptyResponse = try await auth.client.request("/api/projects/\(project.id)", method: "PATCH", body: Body(currentInstruction: position)); Telemetry.shared.track("reader_progressed") } catch { readerError = error.localizedDescription } }
+    private func completeProject() async {
+        guard !isCompletingProject, isAtLastStep, !hasCompletedProject else { return }
+        isCompletingProject = true
+        defer { isCompletingProject = false }
+        if let lastPosition = currentStep?.lastPosition { position = lastPosition }
+        if auth.token != "demo" {
+            struct Body: Encodable { let currentInstruction: Int; let status = "completed" }
+            do {
+                let _: EmptyResponse = try await auth.client.request("/api/projects/\(project.id)", method: "PATCH", body: Body(currentInstruction: position))
+            } catch {
+                readerError = error.localizedDescription
+                return
+            }
+        } else {
+            UserDefaults.standard.set(position, forKey: "demoReaderPosition")
+        }
+        hasCompletedProject = true
+        Telemetry.shared.track("project_completed_in_reader")
+        onCompleted()
+        showCompletion = true
+    }
     private func saveNote() async { guard auth.token != "demo" else { note = ""; showNotes = false; return }; isSavingNote = true; defer { isSavingNote = false }; struct Body: Encodable { let instructionPosition: Int; let body: String }; do { let _: EmptyResponse = try await auth.client.request("/api/projects/\(project.id)/notes", method: "POST", body: Body(instructionPosition: position, body: note)); note = ""; showNotes = false } catch { readerError = error.localizedDescription } }
+
+    private var completionView: some View {
+        NavigationStack {
+            VStack(spacing: 22) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 72))
+                    .foregroundStyle(Color.brandPink)
+                    .accessibilityHidden(true)
+                Text("You finished \(project.name)!")
+                    .font(.largeTitle.bold())
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Color.ink)
+                Text("Congratulations — your project is marked complete and stays available with its instructions and notes.")
+                    .font(.title3)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+                Button {
+                    showCompletion = false
+                    dismiss()
+                } label: {
+                    Label("Done", systemImage: "checkmark").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.ink)
+                .controlSize(.large)
+                .accessibilityIdentifier("completion-done")
+            }
+            .padding(28)
+            .navigationTitle("Project complete")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDetents([.medium, .large])
+        .interactiveDismissDisabled()
+    }
 }
 
 struct CreateProjectView: View {

@@ -32,6 +32,7 @@ struct RootView: View {
             else if auth.user == nil { SignInView() }
             else if ProcessInfo.processInfo.arguments.contains("-patternDemo") { NavigationStack { PatternDetailView(pattern: DemoData.pattern) } }
             else if ProcessInfo.processInfo.arguments.contains("-readerSectionsDemo") { NavigationStack { ReaderView(project: DemoData.project, showSectionsInitially: true) } }
+            else if ProcessInfo.processInfo.arguments.contains("-readerRepeatDemo") { NavigationStack { ReaderView(project: DemoData.repeatProject) } }
             else if ProcessInfo.processInfo.arguments.contains("-readerDemo") { NavigationStack { ReaderView(project: DemoData.project) } }
             else { MainTabs() }
         }

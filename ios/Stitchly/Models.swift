@@ -28,9 +28,39 @@ struct Instruction: Codable, Identifiable, Hashable, Sendable {
     let stitchCount: Int?
     let optional: Bool
     let confidence: String?
+    let instructionNumber: Int?
+    let instructionNumberEnd: Int?
+    let sourceGroup: String?
 
-    init(id: String, position: Int, section: String, instructionKind: String, sourceLabel: String?, instructions: String, notes: String?, stitchCount: Int?, optional: Bool, confidence: String? = nil) {
-        self.id = id; self.position = position; self.section = section; self.instructionKind = instructionKind; self.sourceLabel = sourceLabel; self.instructions = instructions; self.notes = notes; self.stitchCount = stitchCount; self.optional = optional; self.confidence = confidence
+    init(id: String, position: Int, section: String, instructionKind: String, sourceLabel: String?, instructions: String, notes: String?, stitchCount: Int?, optional: Bool, confidence: String? = nil, instructionNumber: Int? = nil, instructionNumberEnd: Int? = nil, sourceGroup: String? = nil) {
+        self.id = id; self.position = position; self.section = section; self.instructionKind = instructionKind; self.sourceLabel = sourceLabel; self.instructions = instructions; self.notes = notes; self.stitchCount = stitchCount; self.optional = optional; self.confidence = confidence; self.instructionNumber = instructionNumber; self.instructionNumberEnd = instructionNumberEnd; self.sourceGroup = sourceGroup
+    }
+}
+
+struct ReaderStep: Identifiable, Hashable, Sendable {
+    let instructions: [Instruction]
+    var id: String { instructions.first?.id ?? "reader-step" }
+    var firstPosition: Int { instructions.first?.position ?? 1 }
+    var lastPosition: Int { instructions.last?.position ?? firstPosition }
+    var section: String { instructions.first?.section ?? "Pattern" }
+    var sourceLabel: String? { instructions.first?.sourceLabel }
+    var instruction: Instruction? { instructions.first }
+
+    var repeatCount: Int? {
+        guard instructions.count > 1 else { return nil }
+        let repeatedUnitWidth = referencedRangeWidth(in: instruction?.instructions ?? "") ?? 1
+        let count = instructions.count / max(repeatedUnitWidth, 1)
+        return count > 1 ? count : nil
+    }
+
+    private func referencedRangeWidth(in text: String) -> Int? {
+        let pattern = #"(?i)repeat\s+(?:rows?|rounds?)\s+(\d+)\s*[-–—]\s*(\d+)"#
+        guard let expression = try? NSRegularExpression(pattern: pattern),
+              let match = expression.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let startRange = Range(match.range(at: 1), in: text),
+              let endRange = Range(match.range(at: 2), in: text),
+              let start = Int(text[startRange]), let end = Int(text[endRange]), end >= start else { return nil }
+        return end - start + 1
     }
 }
 
@@ -43,6 +73,22 @@ struct PatternSection: Identifiable, Hashable, Sendable {
 }
 
 extension Array where Element == Instruction {
+    var readerSteps: [ReaderStep] {
+        let ordered = sorted { $0.position < $1.position }
+        var steps: [ReaderStep] = []
+        for instruction in ordered {
+            if let group = instruction.sourceGroup,
+               let last = steps.last,
+               last.instructions.last?.sourceGroup == group,
+               last.section == instruction.section {
+                steps[steps.count - 1] = ReaderStep(instructions: last.instructions + [instruction])
+            } else {
+                steps.append(ReaderStep(instructions: [instruction]))
+            }
+        }
+        return steps
+    }
+
     var patternSections: [PatternSection] {
         let ordered = sorted { $0.position < $1.position }
         var sections: [PatternSection] = []
@@ -103,5 +149,14 @@ enum DemoData {
         Instruction(id: "i6", position: 6, section: "Sleeves", instructionKind: "setup", sourceLabel: "Cuff", instructions: "Work the cuff ribbing to the required wrist measurement.", notes: "Make two matching sleeves.", stitchCount: nil, optional: false)
     ]
     static let project = Project(id: "project-demo", patternId: pattern.id, name: "My coral cardigan", status: "active", yarn: "Coral merino blend", currentInstruction: 2, patternName: pattern.name, totalInstructions: 18, craft: "crochet")
+    static let repeatInstructions = (9...72).map { row in
+        Instruction(
+            id: "headband-row-\(row)", position: row, section: "Headband", instructionKind: "row",
+            sourceLabel: "Rows 9–72", instructions: "Repeat Rows 7–8 thirty-two times, or until the work comfortably wraps around your head.",
+            notes: "Add a note if you change the length for your preferred fit.", stitchCount: 18, optional: false,
+            instructionNumber: row, instructionNumberEnd: 72, sourceGroup: "row:9-72"
+        )
+    }
+    static let repeatProject = Project(id: "headband-demo", patternId: "headband-pattern-demo", name: "Stitchly starter headband", status: "active", yarn: "Aran yarn", currentInstruction: 9, patternName: "Stitchly Starter Headband", totalInstructions: 64, craft: "knit")
     static let notes = [ProjectNote(id: "note-demo", instructionPosition: 2, body: "Used the coral marker at the side seam.", createdAt: Date(timeIntervalSince1970: 1_753_084_800))]
 }
