@@ -71,12 +71,36 @@ struct BrandedSplashView: View {
 }
 
 struct SignInView: View {
+    private enum AuthField: String, Hashable {
+        case name
+        case email
+        case password
+    }
+
     @EnvironmentObject private var auth: AuthManager
+    @FocusState private var focusedField: AuthField?
     @State private var email = ""
     @State private var password = ""
     @State private var name = ""
     @State private var createAccount = false
-    private var canSubmit: Bool { email.contains("@") && password.count >= 8 && (!createAccount || !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
+    @State private var showPassword = false
+    @State private var hasAttemptedSubmit = false
+    @State private var isSubmitting = false
+
+    private var nameIsInvalid: Bool { createAccount && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var emailIsInvalid: Bool { !email.contains("@") }
+    private var passwordIsInvalid: Bool { password.count < 8 }
+    private var canSubmit: Bool { !nameIsInvalid && !emailIsInvalid && !passwordIsInvalid }
+    private var isWorking: Bool { auth.isWorking || isSubmitting }
+    private var validationMessage: String? {
+        guard hasAttemptedSubmit else { return nil }
+        var messages: [String] = []
+        if nameIsInvalid { messages.append("Enter your name") }
+        if emailIsInvalid { messages.append("Enter a valid email address") }
+        if passwordIsInvalid { messages.append("Use at least 8 characters for your password") }
+        return messages.isEmpty ? nil : messages.joined(separator: ". ") + "."
+    }
+
     var body: some View {
         ZStack {
             LinearGradient(colors: [.cream, .white, .brandPink.opacity(0.16)], startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
@@ -85,31 +109,135 @@ struct SignInView: View {
                     Image("BrandIcon").resizable().scaledToFit().frame(width: 108, height: 108).clipShape(.rect(cornerRadius: 24)).shadow(color: .brandPink.opacity(0.22), radius: 20, y: 10)
                     VStack(spacing: 6) { Text("Stitchly").font(.system(.largeTitle, design: .rounded, weight: .bold)).foregroundStyle(Color.ink); Text(createAccount ? "Create your maker space." : "Welcome back, maker.").font(.title3).foregroundStyle(.secondary) }
                     VStack(spacing: 12) {
-                        if createAccount { authField("Your name") { TextField("", text: $name).textContentType(.name).textInputAutocapitalization(.words).accessibilityLabel("Your name") } }
-                        authField("Email address") { TextField("", text: $email).textContentType(.emailAddress).textInputAutocapitalization(.never).keyboardType(.emailAddress).autocorrectionDisabled().accessibilityLabel("Email address") }
-                        authField("Password") { SecureField("", text: $password).textContentType(createAccount ? .newPassword : .password).accessibilityLabel("Password") }
+                        if createAccount {
+                            authField("Your name", icon: "person", focus: .name, isInvalid: hasAttemptedSubmit && nameIsInvalid) {
+                                TextField("", text: $name)
+                                    .textContentType(.name)
+                                    .textInputAutocapitalization(.words)
+                                    .submitLabel(.next)
+                                    .padding(.vertical, 16)
+                                    .focused($focusedField, equals: .name)
+                                    .onSubmit { focusedField = .email }
+                                    .accessibilityLabel("Your name")
+                                    .accessibilityHint(hasAttemptedSubmit && nameIsInvalid ? "Required" : "")
+                                    .accessibilityIdentifier("auth-name-field")
+                            }
+                        }
+                        authField("Email address", icon: "envelope", focus: .email, isInvalid: hasAttemptedSubmit && emailIsInvalid) {
+                            TextField("", text: $email)
+                                .textContentType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .keyboardType(.emailAddress)
+                                .autocorrectionDisabled()
+                                .submitLabel(.next)
+                                .padding(.vertical, 16)
+                                .focused($focusedField, equals: .email)
+                                .onSubmit { focusedField = .password }
+                                .accessibilityLabel("Email address")
+                                .accessibilityHint(hasAttemptedSubmit && emailIsInvalid ? "Enter a valid email address" : "")
+                                .accessibilityIdentifier("auth-email-field")
+                        }
+                        authField("Password", icon: "lock", focus: .password, isInvalid: hasAttemptedSubmit && passwordIsInvalid) {
+                            HStack(spacing: 4) {
+                                Group {
+                                    if showPassword {
+                                        TextField("", text: $password)
+                                    } else {
+                                        SecureField("", text: $password)
+                                    }
+                                }
+                                .textContentType(createAccount ? .newPassword : .password)
+                                .submitLabel(.go)
+                                .padding(.vertical, 16)
+                                .focused($focusedField, equals: .password)
+                                .onSubmit(submit)
+                                .accessibilityLabel("Password")
+                                .accessibilityHint(hasAttemptedSubmit && passwordIsInvalid ? "Use at least 8 characters" : "")
+                                .accessibilityIdentifier("auth-password-field")
+                                Button {
+                                    showPassword.toggle()
+                                    Task { await Task.yield(); focusedField = .password }
+                                } label: {
+                                    Image(systemName: showPassword ? "eye.slash" : "eye")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .frame(width: 44, height: 44)
+                                        .contentShape(.rect)
+                                }
+                                .buttonStyle(.plain)
+                                .foregroundStyle(Color.ink)
+                                .accessibilityLabel(showPassword ? "Hide password" : "Show password")
+                                .accessibilityIdentifier("toggle-password-visibility")
+                            }
+                        }
+                        if let validationMessage {
+                            Label(validationMessage, systemImage: "exclamationmark.circle.fill")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityIdentifier("auth-validation-message")
+                        }
                     }
-                    Button {
-                        if canSubmit { Task { await auth.authenticateWithEmail(email: email, password: password, name: createAccount ? name : nil, createAccount: createAccount) } }
-                        else { auth.errorMessage = createAccount ? "Enter your name, a valid email address, and a password of at least 8 characters." : "Enter a valid email address and a password of at least 8 characters." }
-                    } label: {
-                        if auth.isWorking { LoadingButtonLabel(createAccount ? "Creating your account…" : "Signing you in…") }
+                    Button(action: submit) {
+                        if isWorking { LoadingButtonLabel(createAccount ? "Creating your account…" : "Signing you in…") }
                         else { Text(createAccount ? "Create account" : "Sign in").frame(maxWidth: .infinity) }
-                    }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).disabled(auth.isWorking)
-                    Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account") { withAnimation { createAccount.toggle() } }
-                        .font(.subheadline.weight(.semibold)).tint(.ink).frame(minHeight: 44).contentShape(.rect).disabled(auth.isWorking)
+                    }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).disabled(isWorking)
+                    Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account", action: toggleMode)
+                        .font(.subheadline.weight(.semibold)).tint(.ink).frame(minHeight: 44).contentShape(.rect).disabled(isWorking)
                     HStack { Rectangle().frame(height: 1); Text("or").font(.footnote.weight(.semibold)); Rectangle().frame(height: 1) }.foregroundStyle(Color.ink.opacity(0.72))
                     SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
-                        .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(auth.isWorking)
+                        .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(isWorking)
                     Text("Your patterns stay private and belong to you.").font(.footnote).foregroundStyle(Color.ink)
                 }.padding(28).padding(.top, 24)
             }.scrollDismissesKeyboard(.interactively)
         }
     }
-    private func authField<Field: View>(_ label: String, @ViewBuilder field: () -> Field) -> some View {
+
+    private func authField<Field: View>(_ label: String, icon: String, focus: AuthField, isInvalid: Bool, @ViewBuilder field: () -> Field) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(label).font(.caption.weight(.semibold)).foregroundStyle(Color.ink)
-            field().textFieldStyle(.roundedBorder).controlSize(.large)
+            HStack(spacing: 12) {
+                Image(systemName: isInvalid ? "exclamationmark.circle.fill" : icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .frame(width: 22)
+                    .foregroundStyle(isInvalid ? .red : Color.ink)
+                    .accessibilityHidden(true)
+                field()
+                    .textFieldStyle(.plain)
+                    .frame(maxWidth: .infinity, minHeight: 54)
+            }
+            .padding(.horizontal, 14)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(isInvalid ? Color.red : (focusedField == focus ? Color.brandPink : Color.ink.opacity(0.18)), lineWidth: isInvalid || focusedField == focus ? 2 : 1)
+            }
+            .contentShape(.rect)
+            .onTapGesture { focusedField = focus }
+        }
+    }
+
+    private func toggleMode() {
+        guard !isWorking else { return }
+        let willCreateAccount = !createAccount
+        withAnimation {
+            createAccount = willCreateAccount
+            hasAttemptedSubmit = false
+        }
+        focusedField = willCreateAccount ? .name : .email
+    }
+
+    private func submit() {
+        guard !isWorking else { return }
+        hasAttemptedSubmit = true
+        guard canSubmit else {
+            focusedField = nameIsInvalid ? .name : (emailIsInvalid ? .email : .password)
+            return
+        }
+        focusedField = nil
+        isSubmitting = true
+        Task {
+            await auth.authenticateWithEmail(email: email, password: password, name: createAccount ? name : nil, createAccount: createAccount)
+            isSubmitting = false
         }
     }
 }

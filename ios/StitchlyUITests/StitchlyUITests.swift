@@ -51,11 +51,48 @@ import XCTest
         let app = XCUIApplication()
         app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
-        XCTAssertTrue(app.textFields["Email address"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.secureTextFields["Password"].exists)
+        let email = app.textFields["Email address"]
+        let password = app.secureTextFields["Password"]
+        XCTAssertTrue(email.waitForExistence(timeout: 5))
+        XCTAssertTrue(password.exists)
+        XCTAssertTrue(email.isHittable)
+        XCTAssertTrue(password.isHittable)
+        XCTAssertGreaterThanOrEqual(app.buttons["toggle-password-visibility"].frame.height, 44)
         XCTAssertTrue(app.buttons["Sign in"].exists)
         XCTAssertTrue(app.buttons["Continue with Apple"].exists)
         try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
+    }
+
+    func testAuthenticationFieldsSupportEdgeTapsKeyboardProgressionAndModeSwitching() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-skipFirstLaunchSplashForUITests"]
+        app.launch()
+
+        let email = app.textFields["Email address"]
+        XCTAssertTrue(email.waitForExistence(timeout: 5))
+        app.buttons["Sign in"].tap()
+        XCTAssertTrue(app.staticTexts["auth-validation-message"].exists)
+
+        email.coordinate(withNormalizedOffset: CGVector(dx: -0.15, dy: 0.5)).tap()
+        email.typeText("maker@example.com")
+        email.typeText("\n")
+
+        let password = app.secureTextFields["Password"]
+        XCTAssertTrue(password.exists)
+        password.typeText("stitchly-demo")
+        let visibility = app.buttons["toggle-password-visibility"]
+        XCTAssertTrue(visibility.isHittable)
+        visibility.tap()
+        XCTAssertTrue(app.textFields["Password"].exists)
+
+        app.swipeDown()
+        let modeSwitch = app.buttons["New here? Create an account"]
+        XCTAssertTrue(modeSwitch.isHittable)
+        modeSwitch.tap()
+        let name = app.textFields["Your name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 3))
+        XCTAssertTrue(name.isHittable)
+        XCTAssertEqual(email.value as? String, "maker@example.com")
     }
 
     func testFirstRunOnboardingCompletesBeforeAuthentication() throws {
