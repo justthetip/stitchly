@@ -35,10 +35,20 @@ struct APIClient: Sendable {
     }
 
     func imageData(_ path: String) async throws -> Data {
+        try await privateAssetData(path, accepting: "image/*")
+    }
+
+    func pdfData(_ path: String) async throws -> Data {
+        try await privateAssetData(path, accepting: "application/pdf")
+    }
+
+    private func privateAssetData(_ path: String, accepting contentType: String) async throws -> Data {
         var request = URLRequest(url: Self.baseURL.appending(path: path))
+        request.setValue(contentType, forHTTPHeaderField: "Accept")
         if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else { throw APIError.invalidResponse }
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard 200..<300 ~= http.statusCode else { throw APIError.server("The private file couldn’t be opened (\(http.statusCode)).") }
         return data
     }
 

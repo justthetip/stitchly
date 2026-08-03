@@ -13,6 +13,7 @@
 		463145A1B7737B67AA624168 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */; };
 		49D7B6650ED27275AB1BA9CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5F144145528B63171AD36E0E /* Assets.xcassets */; };
 		6FC376CE71AA58E992857736 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BF2580FCC98BF2993759CA97 /* LaunchScreen.storyboard */; };
+		728E3BC82D2C735FDF02A3F9 /* OriginalPDFView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F558BCE4AE79FB9A1DDC66 /* OriginalPDFView.swift */; };
 		7AAECFC44F62BF501A381C43 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2816538EED2221611A1801B4 /* Models.swift */; };
 		93ADAD6FC413C6DB3C89814D /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815A74C9D4BBFC5D122B0928 /* AccountView.swift */; };
 		9B429D4021B14992165E876F /* ReviewPromptPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA911B0FB4FCFA1FCD537052 /* ReviewPromptPolicy.swift */; };
@@ -52,6 +53,7 @@
 		806CE3EF509AEF3EBB9E2E3A /* StitchlyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = StitchlyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		815A74C9D4BBFC5D122B0928 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		83F84F149B7E2B4A0682623D /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
+		85F558BCE4AE79FB9A1DDC66 /* OriginalPDFView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalPDFView.swift; sourceTree = "<group>"; };
 		9B5292D329738A085F62B463 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		B32F63E003499D6CC7AE4A51 /* Stitchly.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Stitchly.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BF2580FCC98BF2993759CA97 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -87,6 +89,7 @@
 				E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */,
 				2816538EED2221611A1801B4 /* Models.swift */,
 				CF0001CD284F0E186D51EF85 /* OnboardingView.swift */,
+				85F558BCE4AE79FB9A1DDC66 /* OriginalPDFView.swift */,
 				4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */,
 				01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */,
 				CA911B0FB4FCFA1FCD537052 /* ReviewPromptPolicy.swift */,
@@ -265,6 +268,7 @@
 				BAF7C2DEF383F1C6B39FD9EB /* LibraryViews.swift in Sources */,
 				7AAECFC44F62BF501A381C43 /* Models.swift in Sources */,
 				E57F10F94BAFCC1C429E1253 /* OnboardingView.swift in Sources */,
+				728E3BC82D2C735FDF02A3F9 /* OriginalPDFView.swift in Sources */,
 				E956EED2D8BEB4E1BD75A197 /* ProjectViews.swift in Sources */,
 				9B429D4021B14992165E876F /* ReviewPromptPolicy.swift in Sources */,
 				1AD6D4C4287A840B0642360E /* StitchlyApp.swift in Sources */,
@@ -323,7 +327,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -435,7 +439,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

@@ -93,17 +93,18 @@ export default function ProjectDetailPage() {
           <PatternCover
             coverUrl={project.cover_url}
             craft={project.craft}
+            kind="project"
             alt={`${project.pattern_name} cover`}
-            fallbackClassName="relative size-56"
           />
         </div>
-        <Link
-          href={`/library/${project.pattern_id}`}
-          className="mt-5 inline-flex items-center gap-1 text-xs font-extrabold text-primary"
-        >
-          {project.pattern_name}
-          <ArrowRight className="size-3" />
-        </Link>
+        <div className="mt-5 flex flex-wrap items-center gap-4">
+          <Link href={`/library/${project.pattern_id}`} className="inline-flex items-center gap-1 text-xs font-extrabold text-primary">
+            {project.pattern_name}<ArrowRight className="size-3" />
+          </Link>
+          <a href={`/api/patterns/${project.pattern_id}/original`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-extrabold text-primary">
+            View original PDF<ArrowRight className="size-3" />
+          </a>
+        </div>
         <h1 className="font-heading mt-1 text-3xl font-black">
           {project.name}
         </h1>

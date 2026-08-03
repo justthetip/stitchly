@@ -120,8 +120,8 @@ function ContinueProject({ project }: { project: Project }) {
         <PatternCover
           coverUrl={project.cover_url}
           craft={project.craft}
+          kind="project"
           alt={`${project.pattern_name} cover`}
-          fallbackClassName="absolute inset-4 m-auto size-40"
         />
       </div>
       <div className="flex flex-col justify-center p-6">

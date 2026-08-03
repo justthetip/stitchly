@@ -1,20 +1,19 @@
 import Image from "next/image";
-import { PatternArt } from "@/components/craft-art";
 import { cn } from "@/lib/utils";
 
 type PatternCoverProps = {
   coverUrl?: string | null;
   craft: "knit" | "crochet";
+  kind?: "pattern" | "project";
   index?: number;
   className?: string;
-  fallbackClassName?: string;
   alt?: string;
 };
 
-export function PatternCover({ coverUrl, craft, index, className, fallbackClassName, alt = "Pattern cover" }: PatternCoverProps) {
+export function PatternCover({ coverUrl, kind = "pattern", className, alt = "Pattern cover" }: PatternCoverProps) {
   if (coverUrl) {
     return <Image src={coverUrl} alt={alt} fill unoptimized sizes="(max-width: 768px) 50vw, 33vw" className={cn("object-cover", className)} />;
   }
 
-  return <PatternArt index={index ?? (craft === "knit" ? 0 : 1)} className={fallbackClassName} />;
+  return <Image src={`/illustrations/${kind}-fallback.png`} alt="" fill sizes="(max-width: 768px) 50vw, 33vw" className={cn("object-cover", className)} />;
 }

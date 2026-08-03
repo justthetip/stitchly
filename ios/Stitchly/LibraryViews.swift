@@ -37,6 +37,7 @@ struct LibraryView: View {
     @EnvironmentObject private var auth: AuthManager
     @StateObject private var store = LibraryStore()
     @State private var importing = false
+    @State private var showImportIntroduction = false
     @State private var addingExample = false
     @State private var searchText = ""
     @State private var craftFilter = PatternCraftFilter.all
@@ -45,6 +46,8 @@ struct LibraryView: View {
     @State private var patternToDelete: Pattern?
     @State private var deletingPattern = false
     @State private var deletionError: String?
+    @State private var readyPattern: Pattern?
+    @State private var createdProject: Project?
     private var visiblePatterns: [Pattern] { PatternLibraryFiltering.apply(store.patterns, searchText: searchText, craft: craftFilter) }
     var body: some View {
         NavigationStack {
@@ -89,9 +92,17 @@ struct LibraryView: View {
             .toolbar { ToolbarItem(placement: .primaryAction) { Button("Import", systemImage: "plus", action: beginImport).disabled(store.isLoading || importing) } }
             .navigationDestination(for: Pattern.self) { PatternDetailView(pattern: $0) }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.pdf]) { result in if case .success(let url) = result { Task { await importPDF(url) } } }
-            .sheet(isPresented: .init(get: { reviewResponse != nil }, set: { if !$0 { reviewResponse = nil } })) {
-                if let response = reviewResponse { PatternImportReviewView(response: response) { reviewResponse = nil; if auth.token == "demo" && reviewWasExample { store.patterns = [response.pattern]; reviewWasExample = false } else { Task { await store.load(client: auth.client, message: "Refreshing your library after reviewing the pattern…") } } } }
+            .sheet(isPresented: $showImportIntroduction) {
+                ImportIntroductionView {
+                    showImportIntroduction = false
+                    Task { try? await Task.sleep(for: .milliseconds(250)); importing = true }
+                }
             }
+            .sheet(isPresented: .init(get: { reviewResponse != nil }, set: { if !$0 { reviewResponse = nil } })) {
+                if let response = reviewResponse { PatternImportReviewView(response: response) { saved in saved ? finishReview(response) : discardReview() } }
+            }
+            .sheet(item: $readyPattern) { pattern in PatternReadyView(pattern: pattern) { project in readyPattern = nil; createdProject = project } }
+            .sheet(item: $createdProject) { ProjectCreatedView(project: $0) }
             .task { await store.load(client: auth.client); if ProcessInfo.processInfo.arguments.contains("-importReviewDemo") { reviewResponse = PatternResponse(pattern: DemoData.pattern, instructions: DemoData.instructions) } }
             .refreshable { await store.load(client: auth.client) }
             .alert("Couldn’t load library", isPresented: .init(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("Try again") { Task { await store.load(client: auth.client) } } } message: { Text(store.error ?? "") }
@@ -104,7 +115,22 @@ struct LibraryView: View {
         }
     }
     private func resetFilters() { searchText = ""; craftFilter = .all }
-    private func beginImport() { guard !store.isLoading, !importing else { return }; importing = true }
+    private func beginImport() { guard !store.isLoading, !importing, !showImportIntroduction else { return }; showImportIntroduction = true }
+    private func finishReview(_ response: PatternResponse) {
+        reviewResponse = nil
+        if auth.token == "demo" && reviewWasExample {
+            store.patterns = [response.pattern]
+            reviewWasExample = false
+        } else {
+            Task { await store.load(client: auth.client, message: "Refreshing your library after reviewing the pattern…") }
+        }
+        Task { try? await Task.sleep(for: .milliseconds(350)); readyPattern = response.pattern }
+    }
+    private func discardReview() {
+        reviewResponse = nil
+        reviewWasExample = false
+        Task { await store.load(client: auth.client, message: "Refreshing your library after discarding the import…") }
+    }
     private func deletePattern(_ pattern: Pattern) async {
         guard !deletingPattern else { return }
         deletingPattern = true; patternToDelete = nil
@@ -165,25 +191,38 @@ struct PatternImportReviewView: View {
     @EnvironmentObject private var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
     let response: PatternResponse
-    let onFinished: () -> Void
+    let onFinished: (Bool) -> Void
     @State private var drafts: [ReviewInstruction]
     @State private var isSaving = false
     @State private var isDiscarding = false
     @State private var confirmDiscard = false
+    @State private var showGuidance = true
+    @State private var showOriginal = false
     @State private var error: String?
 
-    init(response: PatternResponse, onFinished: @escaping () -> Void) {
+    init(response: PatternResponse, onFinished: @escaping (Bool) -> Void) {
         self.response = response; self.onFinished = onFinished; _drafts = State(initialValue: response.instructions.sorted { $0.position < $1.position }.map(ReviewInstruction.init))
     }
     var body: some View {
         NavigationStack {
             List {
-                Section { Text("Check the extracted labels and instructions before adding this pattern to your library.").foregroundStyle(.secondary) }
+                if showGuidance {
+                    Section("What to check") {
+                        Label("Compare sections, source labels, and every instruction before saving.", systemImage: "checklist")
+                        Text("Confidence is a prompt to verify—not a guarantee. Preserve the PDF’s own row, round, setup, finishing, and size terminology.")
+                            .foregroundStyle(.secondary)
+                        Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext") }
+                            .accessibilityIdentifier("review-original-pdf")
+                        Button("Hide these tips") { showGuidance = false }
+                            .foregroundStyle(Color.ink)
+                    }
+                }
                 ForEach($drafts) { $draft in
                     Section {
                         if draft.confidence != "high" {
-                            Label(draft.confidence == "low" ? "Needs a careful check" : "Worth checking", systemImage: "exclamationmark.triangle.fill")
+                            Label(draft.confidence == "low" ? "Low confidence — needs a careful check" : "Medium confidence — worth checking", systemImage: "exclamationmark.triangle.fill")
                                 .font(.subheadline.weight(.semibold)).foregroundStyle(Color.ink)
+                                .accessibilityIdentifier("review-confidence-\(draft.position)")
                         }
                         TextField("Section", text: $draft.section)
                         TextField("Source label", text: $draft.sourceLabel)
@@ -202,21 +241,22 @@ struct PatternImportReviewView: View {
             }
             .confirmationDialog("Discard this imported pattern?", isPresented: $confirmDiscard, titleVisibility: .visible) { Button("Discard import", role: .destructive) { Task { await discard() } }; Button("Keep reviewing", role: .cancel) {} } message: { Text("The uploaded pattern and extracted instructions will be removed.") }
             .alert("Couldn’t update the imported pattern", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("Try saving again") { Task { await save() } }; Button("Cancel", role: .cancel) {} } message: { Text(error ?? "") }
+            .sheet(isPresented: $showOriginal) { OriginalPDFView(patternID: response.pattern.id, title: response.pattern.name) }
         }
         .interactiveDismissDisabled()
     }
     private func save() async {
         guard !isSaving, !isDiscarding else { return }; isSaving = true; defer { isSaving = false }
-        if auth.token == "demo" { onFinished(); dismiss(); return }
+        if auth.token == "demo" { onFinished(true); dismiss(); return }
         struct DraftBody: Encodable { let position: Int; let section: String; let sectionPosition: Int; let instructionKind: String; let sourceLabel: String; let instructions: String; let confidence: String }
         struct Body: Encodable { let instructions: [DraftBody] }
         let body = Body(instructions: drafts.enumerated().map { index, draft in DraftBody(position: draft.position, section: draft.section, sectionPosition: index + 1, instructionKind: draft.instructionKind, sourceLabel: draft.sourceLabel, instructions: draft.instructions, confidence: draft.confidence) })
-        do { let _: EmptyResponse = try await auth.client.request("/api/patterns/\(response.pattern.id)", method: "PATCH", body: body); onFinished(); dismiss() } catch { self.error = error.localizedDescription }
+        do { let _: EmptyResponse = try await auth.client.request("/api/patterns/\(response.pattern.id)", method: "PATCH", body: body); onFinished(true); dismiss() } catch { self.error = error.localizedDescription }
     }
     private func discard() async {
         guard !isSaving, !isDiscarding else { return }; isDiscarding = true; defer { isDiscarding = false }
-        if auth.token == "demo" { onFinished(); dismiss(); return }
-        do { let _: EmptyResponse = try await auth.client.request("/api/patterns/\(response.pattern.id)", method: "DELETE"); onFinished(); dismiss() } catch { self.error = error.localizedDescription }
+        if auth.token == "demo" { onFinished(false); dismiss(); return }
+        do { let _: EmptyResponse = try await auth.client.request("/api/patterns/\(response.pattern.id)", method: "DELETE"); onFinished(false); dismiss() } catch { self.error = error.localizedDescription }
     }
 }
 
@@ -225,7 +265,7 @@ struct PatternRow: View {
     let pattern: Pattern
     var body: some View {
         HStack(spacing: 14) {
-            AuthenticatedCoverImage(path: pattern.coverUrl, fallback: pattern.craft == "knit" ? "scissors" : "circle.hexagongrid.fill").frame(width: 58, height: 58)
+            AuthenticatedCoverImage(path: pattern.coverUrl, fallbackAsset: "PatternFallback").frame(width: 58, height: 58)
             VStack(alignment: .leading, spacing: 4) { Text(pattern.name).font(.headline); Text([pattern.designer, "\(pattern.totalInstructions) steps"].compactMap { $0 }.joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary) }
         }.padding(.vertical, 4)
     }
@@ -234,12 +274,12 @@ struct PatternRow: View {
 struct AuthenticatedCoverImage: View {
     @EnvironmentObject private var auth: AuthManager
     let path: String?
-    let fallback: String
+    let fallbackAsset: String
     @State private var image: UIImage?
     var body: some View {
         Group {
             if let image { Image(uiImage: image).resizable().scaledToFill() }
-            else { Image(systemName: fallback).font(.title2).foregroundStyle(Color.brandPink).frame(maxWidth: .infinity, maxHeight: .infinity).background(Color.brandPink.opacity(0.14)) }
+            else { Image(fallbackAsset).resizable().scaledToFill() }
         }
         .clipShape(.rect(cornerRadius: 14))
         .task(id: path) { guard let path else { return }; if let data = try? await auth.client.imageData(path), let loaded = UIImage(data: data) { image = loaded } }
@@ -254,9 +294,11 @@ struct PatternDetailView: View {
     @State private var isLoading = true
     @State private var error: String?
     @State private var createProject = false
+    @State private var showOriginal = false
+    @State private var createdProject: Project?
     var body: some View {
         List {
-            Section { VStack(alignment: .leading, spacing: 14) { CraftBadge(craft: pattern.craft); Text(pattern.name).font(.largeTitle.bold()); if let designer = pattern.designer { Text("by \(designer)").foregroundStyle(.secondary) }; HStack { if let yarn = pattern.yarn { Label(yarn, systemImage: "circle.fill") }; if let tool = pattern.tool { Label(tool, systemImage: "wrench.and.screwdriver") } }.font(.subheadline).foregroundStyle(.secondary); Button { createProject = true } label: { Label("Start a project", systemImage: "plus").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).accessibilityIdentifier("start-pattern-project") }.padding(.vertical) }
+            Section { VStack(alignment: .leading, spacing: 14) { CraftBadge(craft: pattern.craft); Text(pattern.name).font(.largeTitle.bold()); if let designer = pattern.designer { Text("by \(designer)").foregroundStyle(.secondary) }; HStack { if let yarn = pattern.yarn { Label(yarn, systemImage: "circle.fill") }; if let tool = pattern.tool { Label(tool, systemImage: "wrench.and.screwdriver") } }.font(.subheadline).foregroundStyle(.secondary); Button { createProject = true } label: { Label("Start a project", systemImage: "plus").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).accessibilityIdentifier("start-pattern-project"); Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext").frame(maxWidth: .infinity) }.buttonStyle(.bordered).tint(.ink).controlSize(.large).accessibilityIdentifier("pattern-original-pdf") }.padding(.vertical) }
             if isLoading { Section { LoadingBanner(message: "Loading sections and laying out each instruction…").frame(maxWidth: .infinity) } }
             ForEach(instructions.patternSections) { patternSection in
                 Section {
@@ -277,7 +319,9 @@ struct PatternDetailView: View {
         }
         .navigationTitle("Pattern overview")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $createProject) { CreateProjectView(initialPattern: pattern) {} }
+        .sheet(isPresented: $createProject) { CreateProjectView(initialPattern: pattern) { createdProject = $0 } }
+        .sheet(isPresented: $showOriginal) { OriginalPDFView(patternID: pattern.id, title: pattern.name) }
+        .sheet(item: $createdProject) { ProjectCreatedView(project: $0) }
         .task { await load() }
         .alert("Couldn’t open pattern", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("Try again") { Task { await load() } } } message: { Text(error ?? "") }
     }
@@ -287,5 +331,63 @@ struct PatternDetailView: View {
         if auth.token == "demo" { instructions = DemoData.instructions; return }
         do { let response: PatternResponse = try await auth.client.request("/api/patterns/\(pattern.id)"); instructions = response.instructions }
         catch { self.error = error.localizedDescription }
+    }
+}
+
+private struct ImportIntroductionView: View {
+    @Environment(\.dismiss) private var dismiss
+    let choosePDF: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 22) {
+                    Image("PatternFallback").resizable().scaledToFill().frame(height: 220).clipShape(.rect(cornerRadius: 24)).accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("PDF to pocket-sized steps").font(.largeTitle.bold()).foregroundStyle(Color.ink)
+                        Label("Private to your account", systemImage: "lock.fill").font(.headline).foregroundStyle(Color.brandPink)
+                        Text("Choose a knitting or crochet PDF up to 25 MB. Stitchly finds source-order sections, rows, rounds, setup, and finishing, then lets you check every word before saving.")
+                            .foregroundStyle(.secondary)
+                        Label("You’ll review the extracted instructions next", systemImage: "checklist")
+                            .foregroundStyle(Color.ink)
+                    }
+                    Button(action: choosePDF) { Label("Choose PDF", systemImage: "doc.badge.plus").frame(maxWidth: .infinity) }
+                        .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
+                        .accessibilityIdentifier("choose-private-pdf")
+                }
+                .padding()
+            }
+            .navigationTitle("Import a pattern")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+    }
+}
+
+private struct PatternReadyView: View {
+    @Environment(\.dismiss) private var dismiss
+    let pattern: Pattern
+    let onProjectCreated: (Project) -> Void
+    @State private var createProject = false
+    @State private var showPattern = false
+
+    var body: some View {
+        NavigationStack {
+            ContentUnavailableView {
+                Label("Pattern ready", systemImage: "checkmark.seal.fill")
+            } description: {
+                Text("\(pattern.name) is in your private library. Start a project now or review its sections first.")
+            } actions: {
+                Button { createProject = true } label: { Label("Start a project", systemImage: "plus") }
+                    .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
+                    .accessibilityIdentifier("ready-start-project")
+                Button { showPattern = true } label: { Label("Review pattern", systemImage: "list.bullet.rectangle") }
+                    .buttonStyle(.bordered).tint(.ink).controlSize(.large)
+            }
+            .navigationTitle("Next step")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+            .navigationDestination(isPresented: $showPattern) { PatternDetailView(pattern: pattern) }
+            .sheet(isPresented: $createProject) { CreateProjectView(initialPattern: pattern) { project in if let project { onProjectCreated(project) } } }
+        }
     }
 }

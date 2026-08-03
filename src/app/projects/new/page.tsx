@@ -110,7 +110,6 @@ function NewProjectForm() {
               coverUrl={pattern.cover_url}
               craft={pattern.craft}
               alt={`${pattern.name} cover`}
-              fallbackClassName="absolute inset-0 size-16"
             />
           </div>
           <div>
@@ -118,6 +117,9 @@ function NewProjectForm() {
             <p className="text-xs text-muted-foreground">
               {pattern.total_instructions} guided instructions
             </p>
+            <a href={`/api/patterns/${pattern.id}/original`} target="_blank" rel="noreferrer" className="mt-1 inline-flex text-xs font-extrabold text-primary">
+              View original PDF
+            </a>
           </div>
         </div>
         <div className="mt-6 space-y-5">

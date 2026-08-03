@@ -148,7 +148,6 @@ export default function LibraryPage() {
                       craft={pattern.craft}
                       index={index}
                       alt={`${pattern.name} cover`}
-                      fallbackClassName="absolute inset-[8%] size-[84%]"
                     />
                   </div>
                   <div className="px-1 pb-1 pt-3">

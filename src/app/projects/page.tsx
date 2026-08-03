@@ -124,8 +124,8 @@ export default function ProjectsPage() {
                     <PatternCover
                       coverUrl={project.cover_url}
                       craft={project.craft}
+                      kind="project"
                       alt={`${project.pattern_name} cover`}
-                      fallbackClassName="absolute bottom-[-2rem] right-2 size-44 transition group-hover:scale-105"
                     />
                       <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold">
                         {project.craft}

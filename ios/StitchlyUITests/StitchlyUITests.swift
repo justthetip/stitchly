@@ -14,6 +14,7 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Used the coral marker at the side seam."].exists)
         app.buttons["continue-project"].tap()
         XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["reader-actions"].exists)
         XCTAssertTrue(app.buttons["Next"].isHittable)
         app.buttons["Next"].tap()
         XCTAssertTrue(app.staticTexts["Row 2"].waitForExistence(timeout: 3))
@@ -22,6 +23,8 @@ import XCTest
         XCTAssertTrue(app.navigationBars["Project overview"].waitForExistence(timeout: 3))
         app.buttons["continue-project"].tap()
         XCTAssertTrue(app.staticTexts["Row 2"].waitForExistence(timeout: 3))
+        app.buttons["reader-actions"].tap()
+        XCTAssertTrue(app.buttons["reader-original-pdf"].exists)
         app.buttons["reader-sections"].tap()
         XCTAssertTrue(app.navigationBars["Pattern sections"].waitForExistence(timeout: 3))
         try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
@@ -38,7 +41,8 @@ import XCTest
         XCTAssertTrue(app.buttons["Import"].isHittable)
         app.staticTexts["Wildflower Cardigan"].tap()
         XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Back panel"].exists)
+        for _ in 0..<2 where !app.staticTexts["Back panel"].exists { app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["Back panel"].waitForExistence(timeout: 3))
         for _ in 0..<4 { app.swipeUp() }
         XCTAssertTrue(app.staticTexts["Left front"].waitForExistence(timeout: 3))
     }
@@ -138,6 +142,10 @@ import XCTest
         XCTAssertEqual(example.label, "Try an example pattern")
         XCTAssertTrue(importer.isHittable)
         XCTAssertEqual(importer.label, "Import my PDF")
+        importer.tap()
+        XCTAssertTrue(app.navigationBars["Import a pattern"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["PDF to pocket-sized steps"].exists)
+        XCTAssertTrue(app.buttons["choose-private-pdf"].isHittable)
     }
 
     func testEmptyLibraryCanTryExampleAndReviewIt() {
@@ -147,13 +155,19 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Try your first pattern"].waitForExistence(timeout: 5))
         app.buttons["empty-state-primary-action"].tap()
         XCTAssertTrue(app.navigationBars["Review import"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Confidence is a prompt to verify—not a guarantee. Preserve the PDF’s own row, round, setup, finishing, and size terminology."].exists)
+        XCTAssertTrue(app.buttons["review-original-pdf"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["review-instruction-1"].exists)
         app.buttons["save-import-review"].tap()
-        XCTAssertTrue(app.staticTexts["Wildflower Cardigan"].waitForExistence(timeout: 3))
-        app.staticTexts["Wildflower Cardigan"].tap()
+        XCTAssertTrue(app.staticTexts["Pattern ready"].waitForExistence(timeout: 3))
+        app.buttons["Review pattern"].tap()
         XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["pattern-original-pdf"].exists)
         app.buttons["start-pattern-project"].tap()
         XCTAssertTrue(app.navigationBars["New project"].waitForExistence(timeout: 3))
+        app.buttons["Create"].tap()
+        XCTAssertTrue(app.staticTexts["Project ready"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["created-start-making"].isHittable)
     }
 
     func testHomeResumesCurrentProjectInOneAction() {
@@ -181,6 +195,7 @@ import XCTest
         app.launchArguments = ["-demo", "-emptyProjectsDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         XCTAssertTrue(app.staticTexts["Choose what to make next"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["getting-started-guide"].exists)
         app.buttons["empty-state-primary-action"].tap()
         XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 3))
     }
@@ -192,6 +207,7 @@ import XCTest
         XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 5))
         app.staticTexts["My coral cardigan"].tap()
         XCTAssertTrue(app.navigationBars["Project overview"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["project-original-pdf"].exists)
         app.buttons["complete-project"].tap()
         XCTAssertTrue(app.buttons["Mark complete"].waitForExistence(timeout: 3))
         app.buttons["Mark complete"].tap()
@@ -232,11 +248,14 @@ import XCTest
         app.launchArguments = ["-demo", "-libraryDemo", "-importReviewDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         XCTAssertTrue(app.navigationBars["Review import"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["review-confidence-1"].exists)
         let instruction = app.descendants(matching: .any)["review-instruction-1"]
         XCTAssertTrue(instruction.exists)
         instruction.tap()
         instruction.typeText(" Checked")
         app.buttons["save-import-review"].tap()
+        XCTAssertTrue(app.staticTexts["Pattern ready"].waitForExistence(timeout: 3))
+        app.buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 3))
     }
 }

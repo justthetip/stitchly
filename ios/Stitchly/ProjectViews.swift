@@ -28,6 +28,7 @@ import StoreKit
 struct HomeView: View {
     @EnvironmentObject private var auth: AuthManager
     @StateObject private var store = HomeStore()
+    @State private var showHowItWorks = false
     let showProjects: () -> Void
 
     var body: some View {
@@ -54,11 +55,26 @@ struct HomeView: View {
                             }
                             .padding(22)
                             .background(Color.cream, in: .rect(cornerRadius: 24))
+                            DisclosureGroup("How Stitchly works", isExpanded: $showHowItWorks) {
+                                GettingStartedGuide()
+                                    .padding(.top, 12)
+                            }
+                            .font(.headline)
+                            .foregroundStyle(Color.ink)
+                            .padding(18)
+                            .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 20))
                         }
                         .padding()
                     }
                 } else {
-                    ActionableEmptyState(icon: "square.stack.3d.up", title: "Choose what to make next", message: "Start a project from a pattern in your library, then resume it here anytime.", actionTitle: "View projects", actionIcon: "square.stack.3d.up", isDisabled: store.isLoading, action: showProjects)
+                    ScrollView {
+                        VStack(spacing: 22) {
+                            ActionableEmptyState(icon: "square.stack.3d.up", title: "Choose what to make next", message: "Start a project from a pattern in your library, then resume it here anytime.", actionTitle: "View projects", actionIcon: "square.stack.3d.up", isDisabled: store.isLoading, action: showProjects)
+                                .frame(minHeight: 330)
+                            GettingStartedGuide()
+                        }
+                        .padding()
+                    }
                 }
             }
             .navigationTitle("Home")
@@ -68,6 +84,32 @@ struct HomeView: View {
             .overlay(alignment: .top) { if store.isLoading && store.activeProject != nil { LoadingBanner(message: "Refreshing your current project and saved step…").padding(.top, 8) } }
             .alert("Couldn’t load Home", isPresented: .init(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("Try again") { Task { await store.load(client: auth.client) } } } message: { Text(store.error ?? "") }
         }
+    }
+}
+
+private struct GettingStartedGuide: View {
+    private let steps = [
+        ("1", "Add a private PDF", "Choose a knitting or crochet pattern from Files.", "doc.badge.plus"),
+        ("2", "Check the structure", "Review its sections, rows, rounds, setup, and finishing.", "checklist"),
+        ("3", "Start making", "Follow one clear step while progress and notes stay synced.", "play.fill"),
+    ]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("From PDF to one clear step").font(.title2.bold()).foregroundStyle(Color.ink)
+            ForEach(steps, id: \.0) { step in
+                HStack(alignment: .top, spacing: 14) {
+                    Image(systemName: step.3).font(.headline).foregroundStyle(Color.brandPink).frame(width: 30, height: 30).background(Color.brandPink.opacity(0.14), in: .circle)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(step.1).font(.headline).foregroundStyle(Color.ink)
+                        Text(step.2).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(20)
+        .background(Color.cream, in: .rect(cornerRadius: 22))
+        .accessibilityIdentifier("getting-started-guide")
     }
 }
 
@@ -83,6 +125,7 @@ struct ProjectsView: View {
     @State private var projectToDelete: Project?
     @State private var deletingProject = false
     @State private var deletionError: String?
+    @State private var createdProject: Project?
     var body: some View {
         NavigationStack {
             Group {
@@ -99,7 +142,8 @@ struct ProjectsView: View {
             }.navigationTitle("Projects")
                 .toolbar { ToolbarItem(placement: .primaryAction) { Button("New project", systemImage: "plus", action: beginCreatingProject).disabled(store.loading || createProject || deletingProject) } }
                 .navigationDestination(for: Project.self) { project in ProjectOverviewView(project: project) { Task { await store.load(client: auth.client, message: "Refreshing projects after your update…") } } }
-                .sheet(isPresented: $createProject) { CreateProjectView { Task { await store.load(client: auth.client) } } }
+                .sheet(isPresented: $createProject) { CreateProjectView { project in createdProject = project; Task { await store.load(client: auth.client) } } }
+                .sheet(item: $createdProject) { ProjectCreatedView(project: $0) }
                 .task { await store.load(client: auth.client) }.refreshable { await store.load(client: auth.client, message: "Refreshing projects and checking saved progress…") }
                 .overlay(alignment: .top) { if store.loading && !store.projects.isEmpty { LoadingBanner(message: store.loadingMessage).padding(.top, 8) } }
                 .alert("Project wasn’t deleted", isPresented: .init(get: { deletionError != nil }, set: { if !$0 { deletionError = nil } })) { Button("OK") {} } message: { Text(deletionError ?? "") }
@@ -134,7 +178,7 @@ struct ProjectsView: View {
 struct ProjectRow: View {
     let project: Project
     var progress: Double { Double(project.currentInstruction) / Double(max(project.totalInstructions ?? 1, 1)) }
-    var body: some View { HStack(spacing: 12) { AuthenticatedCoverImage(path: project.coverUrl, fallback: "square.stack.3d.up.fill").frame(width: 64, height: 64); VStack(alignment: .leading, spacing: 10) { HStack { VStack(alignment: .leading, spacing: 3) { Text(project.name).font(.headline); Text(project.patternName ?? "Pattern").font(.subheadline).foregroundStyle(.secondary) }; Spacer(); if project.status == "completed" { Label("Completed", systemImage: "checkmark.seal.fill").font(.caption.weight(.semibold)).foregroundStyle(Color.ink) } else if let craft = project.craft { CraftBadge(craft: craft) } }; ProgressView(value: progress).tint(project.status == "completed" ? .ink : .brandOrange); Text(project.status == "completed" ? "Finished project" : "Step \(project.currentInstruction) of \(project.totalInstructions ?? 0)").font(.caption).foregroundStyle(.secondary) } }.padding(.vertical, 6) }
+    var body: some View { HStack(spacing: 12) { AuthenticatedCoverImage(path: project.coverUrl, fallbackAsset: "ProjectFallback").frame(width: 64, height: 64); VStack(alignment: .leading, spacing: 10) { HStack { VStack(alignment: .leading, spacing: 3) { Text(project.name).font(.headline); Text(project.patternName ?? "Pattern").font(.subheadline).foregroundStyle(.secondary) }; Spacer(); if project.status == "completed" { Label("Completed", systemImage: "checkmark.seal.fill").font(.caption.weight(.semibold)).foregroundStyle(Color.ink) } else if let craft = project.craft { CraftBadge(craft: craft) } }; ProgressView(value: progress).tint(project.status == "completed" ? .ink : .brandOrange); Text(project.status == "completed" ? "Finished project" : "Step \(project.currentInstruction) of \(project.totalInstructions ?? 0)").font(.caption).foregroundStyle(.secondary) } }.padding(.vertical, 6) }
 }
 
 struct ProjectOverviewView: View {
@@ -145,6 +189,7 @@ struct ProjectOverviewView: View {
     @State private var isLoading = true
     @State private var isCompleting = false
     @State private var confirmCompletion = false
+    @State private var showOriginal = false
     @State private var isCompleted: Bool
     @State private var error: String?
 
@@ -168,6 +213,8 @@ struct ProjectOverviewView: View {
             Section {
                 NavigationLink { ReaderView(project: project, exitTitle: "Project") } label: { Label(isCompleted ? "Review instructions" : "Continue project", systemImage: "play.fill") }
                     .accessibilityIdentifier("continue-project")
+                Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext") }
+                    .accessibilityIdentifier("project-original-pdf")
                 if !isCompleted {
                     Button { confirmCompletion = true } label: { Label("Mark project complete", systemImage: "checkmark.circle") }
                         .disabled(isCompleting)
@@ -183,6 +230,7 @@ struct ProjectOverviewView: View {
             }
         }
         .navigationTitle("Project overview").navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showOriginal) { OriginalPDFView(patternID: project.patternId, title: project.patternName ?? "Original pattern") }
         .task { await load() }.refreshable { await load() }
         .confirmationDialog("Mark \(project.name) complete?", isPresented: $confirmCompletion, titleVisibility: .visible) { Button("Mark complete") { Task { await complete() } }; Button("Cancel", role: .cancel) {} } message: { Text("Your project and notes will stay available for review.") }
         .alert("Couldn’t update project", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("Try again") { Task { await load() } } } message: { Text(error ?? "") }
@@ -200,6 +248,7 @@ struct ReaderView: View {
     @State private var note = ""
     @State private var showNotes = false
     @State private var showSections = false
+    @State private var showOriginal = false
     @State private var isLoading = true
     @State private var isSavingProgress = false
     @State private var isSavingNote = false
@@ -246,13 +295,22 @@ struct ReaderView: View {
                     .accessibilityLabel(isSavingProgress ? "Saving your place, then return to \(exitTitle)" : "Return to \(exitTitle)")
                     .accessibilityIdentifier("reader-exit")
             }
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button("Sections", systemImage: "list.bullet.rectangle") { showSections = true }.disabled(isLoading)
-                    .accessibilityIdentifier("reader-sections")
-                Button("Note", systemImage: "square.and.pencil") { showNotes = true }.disabled(isLoading)
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button("Sections", systemImage: "list.bullet.rectangle") { showSections = true }
+                        .accessibilityIdentifier("reader-sections")
+                    Button("View original PDF", systemImage: "doc.richtext") { showOriginal = true }
+                        .accessibilityIdentifier("reader-original-pdf")
+                    Button("Add note", systemImage: "square.and.pencil") { showNotes = true }
+                } label: {
+                    Label("Reader actions", systemImage: "ellipsis.circle")
+                }
+                .disabled(isLoading)
+                .accessibilityIdentifier("reader-actions")
             }
         }.toolbar(.hidden, for: .tabBar)
             .sheet(isPresented: $showSections) { sectionNavigator }
+            .sheet(isPresented: $showOriginal) { OriginalPDFView(patternID: project.patternId, title: project.patternName ?? "Original pattern") }
             .sheet(isPresented: $showNotes) { NavigationStack { Form { TextEditor(text: $note).frame(minHeight: 160); if isSavingNote { Section { LoadingBanner(message: "Saving this note to step \(position)…").frame(maxWidth: .infinity) } } }.navigationTitle("Step note").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showNotes = false }.disabled(isSavingNote) }; ToolbarItem(placement: .confirmationAction) { Button { Task { await saveNote() } } label: { if isSavingNote { ProgressView().accessibilityLabel("Saving note") } else { Text("Save") } }.disabled(isSavingNote || note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) } } } }
             .task { await loadReader() }
             .onChange(of: isSavingProgress) { _, saving in
@@ -315,10 +373,10 @@ struct CreateProjectView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.requestReview) private var requestReview
     @EnvironmentObject private var auth: AuthManager
-    let onCreated: () -> Void
+    let onCreated: (Project?) -> Void
     let initialPattern: Pattern?
     @State private var patterns: [Pattern] = []; @State private var selected = ""; @State private var name = ""; @State private var yarn = ""; @State private var notes = ""; @State private var isLoadingPatterns = true; @State private var isCreating = false; @State private var error: String?
-    init(initialPattern: Pattern? = nil, onCreated: @escaping () -> Void) { self.initialPattern = initialPattern; self.onCreated = onCreated; _selected = State(initialValue: initialPattern?.id ?? ""); _name = State(initialValue: initialPattern.map { "\($0.name) project" } ?? "") }
+    init(initialPattern: Pattern? = nil, onCreated: @escaping (Project?) -> Void) { self.initialPattern = initialPattern; self.onCreated = onCreated; _selected = State(initialValue: initialPattern?.id ?? ""); _name = State(initialValue: initialPattern.map { "\($0.name) project" } ?? "") }
     var body: some View { NavigationStack { Form { Section("Pattern") { if isLoadingPatterns { LoadingBanner(message: "Loading patterns from your library…").frame(maxWidth: .infinity) } else { Picker("Pattern", selection: $selected) { Text("Choose a pattern").tag(""); ForEach(patterns) { Text($0.name).tag($0.id) } } } }; Section("Project") { TextField("Project name", text: $name); TextField("Yarn", text: $yarn); TextField("Notes", text: $notes, axis: .vertical) }; if isCreating { Section { LoadingBanner(message: "Creating your project and preparing its first step…").frame(maxWidth: .infinity) } } }.disabled(isCreating).navigationTitle("New project").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(isCreating) }; ToolbarItem(placement: .confirmationAction) { Button { Task { await create() } } label: { if isCreating { ProgressView().accessibilityLabel("Creating project") } else { Text("Create") } }.disabled(isLoadingPatterns || isCreating || selected.isEmpty || name.trimmingCharacters(in: .whitespaces).isEmpty) } }.task { await loadPatterns() }.alert("Couldn’t create project", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") {} } message: { Text(error ?? "") } } }
     private func loadPatterns() async { isLoadingPatterns = true; defer { isLoadingPatterns = false }; if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }; if auth.token == "demo" { patterns = [DemoData.pattern]; selected = initialPattern?.id ?? DemoData.pattern.id; return }; do { let response: PatternListResponse = try await auth.client.request("/api/patterns"); patterns = response.patterns; selected = initialPattern.flatMap { initial in response.patterns.first(where: { $0.id == initial.id })?.id } ?? response.patterns.first?.id ?? "" } catch { self.error = error.localizedDescription } }
     private func create() async {
@@ -326,10 +384,12 @@ struct CreateProjectView: View {
         isCreating = true
         defer { isCreating = false }
         var shouldRequestReview = false
+        var createdProject: Project? = auth.token == "demo" ? DemoData.project : nil
         if auth.token != "demo" {
             struct Body: Encodable { let patternId: String; let name: String; let yarn: String; let notes: String }
             do {
                 let response: ProjectCreationResponse = try await auth.client.request("/api/projects", method: "POST", body: Body(patternId: selected, name: name, yarn: yarn, notes: notes))
+                createdProject = response.project
                 shouldRequestReview = ReviewPromptPolicy().claimRequest(isFirstProject: response.isFirstProject)
                 Telemetry.shared.track("project_created")
             } catch {
@@ -338,10 +398,32 @@ struct CreateProjectView: View {
             }
         }
         dismiss()
-        onCreated()
+        onCreated(createdProject)
         if shouldRequestReview {
             try? await Task.sleep(for: .seconds(1))
             requestReview()
+        }
+    }
+}
+
+struct ProjectCreatedView: View {
+    @Environment(\.dismiss) private var dismiss
+    let project: Project
+    var body: some View {
+        NavigationStack {
+            ContentUnavailableView {
+                Label("Project ready", systemImage: "checkmark.seal.fill")
+            } description: {
+                Text("\(project.name) is ready at your first saved step.")
+            } actions: {
+                NavigationLink { ReaderView(project: project, exitTitle: "Next step") } label: { Label("Start making", systemImage: "play.fill") }
+                    .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
+                    .accessibilityIdentifier("created-start-making")
+                NavigationLink { ProjectOverviewView(project: project) {} } label: { Label("View project overview", systemImage: "square.stack.3d.up") }
+                    .buttonStyle(.bordered).tint(.ink).controlSize(.large)
+            }
+            .navigationTitle("Next step")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
         }
     }
 }

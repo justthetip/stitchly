@@ -106,7 +106,6 @@ export default function PatternDetailPage() {
             coverUrl={pattern.cover_url}
             craft={pattern.craft}
             alt={`${pattern.name} cover`}
-            fallbackClassName="relative size-56"
           />
         </div>
         <p className="mt-5 text-xs font-extrabold uppercase tracking-[.15em] text-primary">
