@@ -86,7 +86,7 @@ struct SignInView: View {
     @State private var createAccount = false
     @State private var showPassword = false
     @State private var hasAttemptedSubmit = false
-    @State private var isSubmitting = false
+    @State private var isSubmitting = ProcessInfo.processInfo.arguments.contains("-authSubmittingDemo")
 
     private var nameIsInvalid: Bool { createAccount && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var emailIsInvalid: Bool { !email.contains("@") }
@@ -181,9 +181,15 @@ struct SignInView: View {
                         }
                     }
                     Button(action: submit) {
-                        if isWorking { LoadingButtonLabel(createAccount ? "Creating your account…" : "Signing you in…") }
-                        else { Text(createAccount ? "Create account" : "Sign in").frame(maxWidth: .infinity) }
-                    }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).disabled(isWorking)
+                        AuthSubmitButtonLabel(
+                            idleText: createAccount ? "Create account" : "Sign in",
+                            loadingText: createAccount ? "Creating your account…" : "Signing you in…",
+                            isLoading: isWorking
+                        )
+                    }
+                    .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
+                    .allowsHitTesting(!isWorking)
+                    .accessibilityIdentifier("auth-submit-button")
                     HStack { Rectangle().frame(height: 1); Text("or").font(.footnote.weight(.semibold)); Rectangle().frame(height: 1) }.foregroundStyle(Color.ink.opacity(0.72))
                     SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
                         .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(isWorking)
@@ -416,6 +422,53 @@ struct LoadingButtonLabel: View {
         HStack { ProgressView().accessibilityHidden(true); Text(text) }.frame(maxWidth: .infinity)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(text)
+    }
+}
+
+struct AuthSubmitButtonLabel: View {
+    let idleText: String
+    let loadingText: String
+    let isLoading: Bool
+
+    var body: some View {
+        ZStack {
+            Text(idleText)
+                .opacity(isLoading ? 0 : 1)
+            HStack(spacing: 10) {
+                InlineStitchSpinner()
+                Text(loadingText)
+            }
+            .opacity(isLoading ? 1 : 0)
+        }
+        .font(.headline)
+        .frame(maxWidth: .infinity, minHeight: 24)
+        .animation(.easeInOut(duration: 0.18), value: isLoading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(isLoading ? loadingText : idleText)
+    }
+}
+
+private struct InlineStitchSpinner: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isAnimating = false
+    private let colors: [Color] = [.white, .brandOrange, .brandPink, .brandBlue]
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<8, id: \.self) { index in
+                Capsule()
+                    .fill(colors[index % colors.count])
+                    .frame(width: 6, height: 2.5)
+                    .offset(y: -8)
+                    .rotationEffect(.degrees(Double(index) * 45))
+            }
+        }
+        .frame(width: 24, height: 24)
+        .rotationEffect(.degrees(reduceMotion ? 0 : (isAnimating ? 360 : 0)))
+        .animation(reduceMotion ? nil : .linear(duration: 1.25).repeatForever(autoreverses: false), value: isAnimating)
+        .onAppear { isAnimating = !reduceMotion }
+        .onChange(of: reduceMotion) { _, shouldReduceMotion in isAnimating = !shouldReduceMotion }
+        .accessibilityHidden(true)
     }
 }
 

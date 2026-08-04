@@ -76,6 +76,16 @@ import XCTest
         try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
     }
 
+    func testAuthSubmitLoadingStateKeepsTheLargeButtonGeometry() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-authSubmittingDemo", "-skipFirstLaunchSplashForUITests"]
+        app.launch()
+        let submit = app.buttons["auth-submit-button"]
+        XCTAssertTrue(submit.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(submit.frame.height, 44)
+        XCTAssertTrue(submit.label.contains("Signing you in"))
+    }
+
     func testAuthenticationFieldsSupportEdgeTapsKeyboardProgressionAndModeSwitching() {
         let app = XCUIApplication()
         app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-skipFirstLaunchSplashForUITests"]
