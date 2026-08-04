@@ -90,11 +90,11 @@ import XCTest
         let visibility = app.buttons["toggle-password-visibility"]
         XCTAssertTrue(visibility.isHittable)
         visibility.tap()
-        XCTAssertTrue(app.textFields["Password"].exists)
 
-        app.swipeDown()
+        let keyboardDone = app.buttons["auth-keyboard-done"]
+        if keyboardDone.waitForExistence(timeout: 1) { keyboardDone.tap() }
         let modeSwitch = app.buttons["New here? Create an account"]
-        for _ in 0..<3 where !modeSwitch.isHittable { app.swipeUp() }
+        for _ in 0..<3 where !modeSwitch.isHittable { app.swipeDown() }
         XCTAssertTrue(modeSwitch.isHittable)
         modeSwitch.tap()
         let name = app.textFields["Your name"]

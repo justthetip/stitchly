@@ -109,6 +109,8 @@ struct SignInView: View {
                 VStack(spacing: 22) {
                     Image("BrandIcon").resizable().scaledToFit().frame(width: 108, height: 108).clipShape(.rect(cornerRadius: 24)).shadow(color: .brandPink.opacity(0.22), radius: 20, y: 10)
                     VStack(spacing: 6) { Text("Stitchly").font(.system(.largeTitle, design: .rounded, weight: .bold)).foregroundStyle(Color.ink); Text(createAccount ? "Create your maker space." : "Welcome back, maker.").font(.title3).foregroundStyle(.secondary) }
+                    Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account", action: toggleMode)
+                        .font(.subheadline.weight(.semibold)).tint(.ink).frame(minHeight: 44).contentShape(.rect).disabled(isWorking)
                     VStack(spacing: 12) {
                         if createAccount {
                             authField("Your name", icon: "person", focus: .name, isInvalid: hasAttemptedSubmit && nameIsInvalid) {
@@ -161,7 +163,7 @@ struct SignInView: View {
                                 } label: {
                                     Image(systemName: showPassword ? "eye.slash" : "eye")
                                         .font(.system(size: 20, weight: .semibold))
-                                        .frame(width: 44, height: 44)
+                                        .frame(width: 48, height: 48)
                                         .contentShape(.rect)
                                 }
                                 .buttonStyle(.plain)
@@ -182,14 +184,29 @@ struct SignInView: View {
                         if isWorking { LoadingButtonLabel(createAccount ? "Creating your account…" : "Signing you in…") }
                         else { Text(createAccount ? "Create account" : "Sign in").frame(maxWidth: .infinity) }
                     }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).disabled(isWorking)
-                    Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account", action: toggleMode)
-                        .font(.subheadline.weight(.semibold)).tint(.ink).frame(minHeight: 44).contentShape(.rect).disabled(isWorking)
                     HStack { Rectangle().frame(height: 1); Text("or").font(.footnote.weight(.semibold)); Rectangle().frame(height: 1) }.foregroundStyle(Color.ink.opacity(0.72))
                     SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
                         .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(isWorking)
                     Text("Your patterns stay private and belong to you.").font(.footnote).foregroundStyle(Color.ink)
                 }.padding(28).padding(.top, 24)
-            }.scrollDismissesKeyboard(.interactively)
+            }
+            .scrollDismissesKeyboard(.immediately)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if focusedField != nil {
+                    HStack {
+                        Text("Keyboard")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    Spacer()
+                    Button("Done") { focusedField = nil }
+                        .accessibilityIdentifier("auth-keyboard-done")
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 44)
+                    .background(.bar)
+                }
+            }
         }
     }
 
