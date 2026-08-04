@@ -307,15 +307,72 @@ struct ActionableEmptyState: View {
 struct LoadingStateView: View {
     let title: String
     let message: String
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var isPresented = false
+    @State private var isAnimating = false
+
+    private var artworkSize: CGFloat { dynamicTypeSize.isAccessibilitySize ? 170 : 240 }
+    private let dotColors: [Color] = [.brandPink, .cream, .brandBlue]
+
     var body: some View {
-        ContentUnavailableView {
-            ProgressView().controlSize(.large).tint(.ink).accessibilityHidden(true)
-            Text(title)
-        } description: {
-            Text(message)
+        ZStack {
+            Color("LaunchBackground").ignoresSafeArea()
+
+            VStack(spacing: dynamicTypeSize.isAccessibilitySize ? 14 : 18) {
+                Image("LoadingStitch")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: artworkSize, height: artworkSize)
+                    .shadow(color: Color.ink.opacity(0.12), radius: 12, y: 8)
+                    .scaleEffect(reduceMotion ? 1 : (isAnimating ? 1.025 : 0.985))
+                    .offset(y: reduceMotion ? 0 : (isAnimating ? -5 : 3))
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isAnimating)
+                    .accessibilityHidden(true)
+
+                Text(title)
+                    .font(.title3.bold())
+                    .foregroundStyle(Color.ink)
+                    .multilineTextAlignment(.center)
+
+                HStack(spacing: 8) {
+                    ForEach(dotColors.indices, id: \.self) { index in
+                        Circle()
+                            .fill(dotColors[index])
+                            .frame(width: 8, height: 8)
+                            .offset(y: reduceMotion ? 0 : (isAnimating ? -3 : 3))
+                            .animation(
+                                reduceMotion ? nil : .easeInOut(duration: 0.7)
+                                    .repeatForever(autoreverses: true)
+                                    .delay(Double(index) * 0.14),
+                                value: isAnimating
+                            )
+                    }
+                }
+                .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 24)
         }
-        .accessibilityElement(children: .combine)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .opacity(isPresented ? 1 : 0)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title). \(message)")
+        .accessibilityIdentifier("branded-loading-state")
+        .accessibilityHidden(!isPresented)
+        .task {
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            if reduceMotion {
+                isPresented = true
+            } else {
+                withAnimation(.easeOut(duration: 0.2)) { isPresented = true }
+                isAnimating = true
+            }
+        }
+        .onChange(of: reduceMotion) { _, shouldReduceMotion in
+            isAnimating = !shouldReduceMotion && isPresented
+        }
     }
 }
 

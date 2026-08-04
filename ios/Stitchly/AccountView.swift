@@ -13,7 +13,7 @@ struct AccountView: View {
                 Section { LabeledContent("Version", value: "1.0.0"); Link("Privacy policy", destination: APIClient.baseURL.appending(path: "/privacy")); Link("Support", destination: APIClient.baseURL.appending(path: "/support")) }
             }.navigationTitle("Account")
                 .disabled(auth.isWorking)
-                .overlay { if auth.isWorking { LoadingStateView(title: "Updating your account", message: operationMessage).background(.regularMaterial) } }
+                .overlay(alignment: .top) { if auth.isWorking { LoadingBanner(message: operationMessage).padding(.top, 8) } }
                 .confirmationDialog("Delete your Stitchly account?", isPresented: $confirmDelete, titleVisibility: .visible) { Button("Delete account and data", role: .destructive) { operationMessage = "Deleting your patterns, projects, notes, and account…"; Task { do { try await auth.deleteAccount() } catch { deletionError = error.localizedDescription } } } } message: { Text("This permanently deletes your patterns, projects, notes, and sign-in connection.") }
                 .alert("Account wasn’t deleted", isPresented: .init(get: { deletionError != nil }, set: { if !$0 { deletionError = nil } })) { Button("OK") {} } message: { Text(deletionError ?? "") }
         }

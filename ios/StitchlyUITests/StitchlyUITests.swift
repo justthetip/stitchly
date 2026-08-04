@@ -150,6 +150,7 @@ import XCTest
         app.launch()
         let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Opening your project'")).firstMatch
         XCTAssertTrue(loading.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["branded-loading-state"].exists)
         XCTAssertTrue(loading.label.contains("Loading pattern sections, your current step, and saved notes."))
         XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 8))
     }
@@ -173,6 +174,7 @@ import XCTest
         app.launch()
         let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Loading your library'")).firstMatch
         XCTAssertTrue(loading.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["branded-loading-state"].exists)
         XCTAssertTrue(loading.label.contains("Loading your pattern library…"))
         XCTAssertTrue(app.staticTexts["Wildflower Cardigan"].waitForExistence(timeout: 3))
     }

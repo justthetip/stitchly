@@ -9,7 +9,22 @@
 
 ## Generate and verify
 
-From the repository root:
+Use the lightest verification mode that matches the current decision point:
+
+- **Iterate** — while tuning visuals, copy, or a narrow interaction: compile the app and install it on the simulator. Run only a directly affected test when the behavior cannot be judged reliably by inspection.
+- **Checkpoint** — when finishing a meaningful feature: run affected unit tests, affected UI journeys, and the relevant Dynamic Type/VoiceOver/accessibility audit. Record any intentionally deferred unrelated suite failure.
+- **Release** — before a TestFlight/App Store upload or a release-readiness claim: run the complete native unit/UI suite plus the web checks below. No iteration or checkpoint result substitutes for this gate.
+
+Iteration compile:
+
+```sh
+xcodebuild build -project ios/Stitchly.xcodeproj -scheme Stitchly \
+  -destination 'platform=iOS Simulator,name=iPhone 16e,OS=26.3.1'
+```
+
+Checkpoint tests should use `-only-testing:Target/TestCase/testName` (or the narrowest relevant test class) rather than starting the complete UI suite.
+
+Release verification from the repository root:
 
 ```sh
 (cd ios && xcodegen generate)
