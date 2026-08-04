@@ -48,7 +48,9 @@ struct OriginalPDFView: View {
             return
         }
         do {
-            let data = try await auth.client.pdfData("/api/patterns/\(patternID)/original")
+            guard let userID = auth.user?.id else { throw APIError.invalidResponse }
+            let path = "/api/patterns/\(patternID)/original"
+            let data = try await AppDataCache.shared.pdfData(for: userID, path: path, client: auth.client)
             guard let loaded = PDFDocument(data: data) else { throw APIError.server("The downloaded file was not a readable PDF.") }
             document = loaded
         } catch {

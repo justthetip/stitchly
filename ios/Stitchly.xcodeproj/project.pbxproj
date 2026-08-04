@@ -12,6 +12,7 @@
 		4132819D1249F19AEB283B6B /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B5292D329738A085F62B463 /* AuthManager.swift */; };
 		463145A1B7737B67AA624168 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */; };
 		49D7B6650ED27275AB1BA9CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5F144145528B63171AD36E0E /* Assets.xcassets */; };
+		58636CA6EB2D83F71D3A3E6F /* DataCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9743005EF2C4DF91DA57169F /* DataCache.swift */; };
 		6FC376CE71AA58E992857736 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BF2580FCC98BF2993759CA97 /* LaunchScreen.storyboard */; };
 		728E3BC82D2C735FDF02A3F9 /* OriginalPDFView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F558BCE4AE79FB9A1DDC66 /* OriginalPDFView.swift */; };
 		7AAECFC44F62BF501A381C43 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2816538EED2221611A1801B4 /* Models.swift */; };
@@ -54,6 +55,7 @@
 		815A74C9D4BBFC5D122B0928 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		83F84F149B7E2B4A0682623D /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
 		85F558BCE4AE79FB9A1DDC66 /* OriginalPDFView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalPDFView.swift; sourceTree = "<group>"; };
+		9743005EF2C4DF91DA57169F /* DataCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataCache.swift; sourceTree = "<group>"; };
 		9B5292D329738A085F62B463 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		B32F63E003499D6CC7AE4A51 /* Stitchly.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Stitchly.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BF2580FCC98BF2993759CA97 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -84,6 +86,7 @@
 				E1E0C769A63C577B2B309AD2 /* APIClient.swift */,
 				5F144145528B63171AD36E0E /* Assets.xcassets */,
 				9B5292D329738A085F62B463 /* AuthManager.swift */,
+				9743005EF2C4DF91DA57169F /* DataCache.swift */,
 				68EF58EA17CE4C75A76CA17C /* Info.plist */,
 				BF2580FCC98BF2993759CA97 /* LaunchScreen.storyboard */,
 				E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */,
@@ -265,6 +268,7 @@
 				BE8B60903D55DFC210A87738 /* APIClient.swift in Sources */,
 				93ADAD6FC413C6DB3C89814D /* AccountView.swift in Sources */,
 				4132819D1249F19AEB283B6B /* AuthManager.swift in Sources */,
+				58636CA6EB2D83F71D3A3E6F /* DataCache.swift in Sources */,
 				BAF7C2DEF383F1C6B39FD9EB /* LibraryViews.swift in Sources */,
 				7AAECFC44F62BF501A381C43 /* Models.swift in Sources */,
 				E57F10F94BAFCC1C429E1253 /* OnboardingView.swift in Sources */,

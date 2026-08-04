@@ -11,9 +11,15 @@ enum APIError: LocalizedError {
 struct APIClient: Sendable {
     static let baseURL = URL(string: "https://stitchly-application.vercel.app")!
     let token: String?
+    private let dataLoader: @Sendable (URLRequest) async throws -> (Data, URLResponse)
     private let decoder: JSONDecoder = {
         let value = JSONDecoder(); value.keyDecodingStrategy = .convertFromSnakeCase; value.dateDecodingStrategy = .iso8601; return value
     }()
+
+    init(token: String?, dataLoader: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse) = { try await URLSession.shared.data(for: $0) }) {
+        self.token = token
+        self.dataLoader = dataLoader
+    }
 
     func request<T: Decodable>(_ path: String, method: String = "GET", body: (any Encodable)? = nil) async throws -> T {
         var request = URLRequest(url: Self.baseURL.appending(path: path))
@@ -24,7 +30,7 @@ struct APIClient: Sendable {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONEncoder().encode(AnyEncodable(body))
         }
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await dataLoader(request)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard 200..<300 ~= http.statusCode else {
             let message = (try? JSONDecoder().decode(ServerError.self, from: data).error) ?? "Request failed (\(http.statusCode))."
@@ -46,7 +52,7 @@ struct APIClient: Sendable {
         var request = URLRequest(url: Self.baseURL.appending(path: path))
         request.setValue(contentType, forHTTPHeaderField: "Accept")
         if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await dataLoader(request)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard 200..<300 ~= http.statusCode else { throw APIError.server("The private file couldn’t be opened (\(http.statusCode)).") }
         return data
@@ -69,7 +75,7 @@ struct APIClient: Sendable {
         upload.setValue("12", forHTTPHeaderField: "x-api-version")
         upload.setValue("private", forHTTPHeaderField: "x-vercel-blob-access")
         upload.setValue("application/pdf", forHTTPHeaderField: "x-content-type")
-        let (responseData, response) = try await URLSession.shared.data(for: upload)
+        let (responseData, response) = try await dataLoader(upload)
         guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else { throw APIError.server("The PDF upload failed.") }
         return try decoder.decode(BlobResponse.self, from: responseData)
     }

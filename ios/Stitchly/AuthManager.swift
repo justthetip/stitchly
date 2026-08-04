@@ -30,7 +30,7 @@ import Security
         guard token != nil, token != "demo" else { isRestoring = false; return }
         defer { isRestoring = false }
         do { let response: SessionResponse = try await client.request("/api/native-auth/session"); user = response.user }
-        catch { signOutLocally() }
+        catch { await signOutLocally() }
     }
 
     func prepare(_ request: ASAuthorizationAppleIDRequest) {
@@ -50,6 +50,7 @@ import Security
             struct Body: Encodable { let identityToken: String; let authorizationCode: String?; let nonce: String; let name: String? }
             let response: SessionResponse = try await APIClient(token: nil).request("/api/native-auth/apple", method: "POST", body: Body(identityToken: identityToken, authorizationCode: code, nonce: nonce, name: name.isEmpty ? nil : name))
             guard let issuedToken = response.token else { throw APIError.invalidResponse }
+            if let previousUserID = user?.id, previousUserID != response.user.id { await AppDataCache.shared.clear(for: previousUserID) }
             token = issuedToken; user = response.user; Keychain.write(issuedToken, key: keychainKey)
         } catch { errorMessage = error.localizedDescription }
     }
@@ -60,13 +61,17 @@ import Security
             struct Body: Encodable { let email: String; let password: String; let name: String?; let mode: String }
             let response: SessionResponse = try await APIClient(token: nil).request("/api/native-auth/email", method: "POST", body: Body(email: email.trimmingCharacters(in: .whitespacesAndNewlines), password: password, name: name?.trimmingCharacters(in: .whitespacesAndNewlines), mode: createAccount ? "sign-up" : "sign-in"))
             guard let issuedToken = response.token else { throw APIError.invalidResponse }
+            if let previousUserID = user?.id, previousUserID != response.user.id { await AppDataCache.shared.clear(for: previousUserID) }
             token = issuedToken; user = response.user; Keychain.write(issuedToken, key: keychainKey)
         } catch { errorMessage = error.localizedDescription }
     }
 
-    func signOut() async { isWorking = true; defer { isWorking = false }; if token != "demo" { let _: EmptyResponse? = try? await client.request("/api/native-auth/session", method: "DELETE") }; signOutLocally() }
-    func deleteAccount() async throws { isWorking = true; defer { isWorking = false }; let _: EmptyResponse = try await client.request("/api/native-auth/account", method: "DELETE"); signOutLocally() }
-    private func signOutLocally() { Keychain.delete(keychainKey); token = nil; user = nil }
+    func signOut() async { isWorking = true; defer { isWorking = false }; if token != "demo" { let _: EmptyResponse? = try? await client.request("/api/native-auth/session", method: "DELETE") }; await signOutLocally() }
+    func deleteAccount() async throws { isWorking = true; defer { isWorking = false }; let _: EmptyResponse = try await client.request("/api/native-auth/account", method: "DELETE"); await signOutLocally() }
+    private func signOutLocally() async {
+        if let userID = user?.id { await AppDataCache.shared.clear(for: userID) }
+        Keychain.delete(keychainKey); token = nil; user = nil
+    }
     private static func sha256(_ value: String) -> String { SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined() }
     private static func randomNonce() -> String { (0..<32).compactMap { _ in "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._".randomElement() }.reduce("") { $0 + String($1) } }
 }

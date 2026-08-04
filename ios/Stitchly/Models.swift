@@ -130,11 +130,11 @@ struct ProjectNote: Codable, Identifiable, Sendable {
     let createdAt: Date
 }
 
-struct PatternListResponse: Codable { let patterns: [Pattern] }
-struct PatternResponse: Codable { let pattern: Pattern; let instructions: [Instruction]; var alreadyAdded: Bool? = nil }
-struct ProjectListResponse: Codable { let projects: [Project] }
-struct ProjectResponse: Codable { let project: Project; let instructions: [Instruction]; let notes: [ProjectNote] }
-struct ProjectCreationResponse: Codable { let project: Project; let isFirstProject: Bool }
+struct PatternListResponse: Codable, Sendable { let patterns: [Pattern] }
+struct PatternResponse: Codable, Sendable { let pattern: Pattern; let instructions: [Instruction]; var alreadyAdded: Bool? = nil }
+struct ProjectListResponse: Codable, Sendable { let projects: [Project] }
+struct ProjectResponse: Codable, Sendable { let project: Project; let instructions: [Instruction]; let notes: [ProjectNote] }
+struct ProjectCreationResponse: Codable, Sendable { let project: Project; let isFirstProject: Bool }
 struct UploadTokenResponse: Codable { let clientToken: String }
 struct BlobResponse: Codable { let url: URL }
 

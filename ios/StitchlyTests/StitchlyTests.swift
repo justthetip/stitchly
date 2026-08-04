@@ -47,4 +47,76 @@ struct StitchlyTests {
         #expect(policy.claimRequest(isFirstProject: true) == true)
         #expect(policy.claimRequest(isFirstProject: true) == false)
     }
+
+    @Test func cacheEntriesUseTheSharedFreshnessWindow() {
+        let now = Date()
+        let fresh = CacheEntry(value: [DemoData.pattern], updatedAt: now.addingTimeInterval(-AppDataCache.freshnessDuration + 1))
+        let stale = CacheEntry(value: [DemoData.pattern], updatedAt: now.addingTimeInterval(-AppDataCache.freshnessDuration - 1))
+        #expect(fresh.isFresh(at: now))
+        #expect(!stale.isFresh(at: now))
+    }
+
+    @Test func accountCachePersistsSeparatelyAndClearsOnInvalidation() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "StitchlyCacheTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = AppDataCache(storageDirectory: directory)
+        let otherPattern = Pattern(id: "other", name: "Other pattern", designer: nil, craft: "knit", difficulty: nil, yarn: nil, tool: nil, totalInstructions: 2, source: "PDF", pageCount: 1)
+
+        await cache.store(patterns: [DemoData.pattern], for: "maker-a")
+        await cache.store(patterns: [otherPattern], for: "maker-b")
+
+        let reloaded = AppDataCache(storageDirectory: directory)
+        #expect(await reloaded.cachedPatterns(for: "maker-a")?.value.map(\.id) == [DemoData.pattern.id])
+        #expect(await reloaded.cachedPatterns(for: "maker-b")?.value.map(\.id) == [otherPattern.id])
+
+        await reloaded.invalidatePattern(for: "maker-a", patternID: DemoData.pattern.id)
+        #expect(await reloaded.cachedPatterns(for: "maker-a") == nil)
+        #expect(await reloaded.cachedPatterns(for: "maker-b")?.value.count == 1)
+
+        await reloaded.clear(for: "maker-b")
+        #expect(await reloaded.cachedPatterns(for: "maker-b") == nil)
+    }
+
+    @Test func duplicatePatternRefreshesShareOneRequest() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "StitchlyCacheTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = AppDataCache(storageDirectory: directory)
+        let counter = CacheRequestCounter()
+        let client = APIClient(token: "test") { request in try await counter.patternResponse(for: request) }
+
+        async let first = cache.refreshPatterns(for: "maker", client: client)
+        async let second = cache.refreshPatterns(for: "maker", client: client)
+        let results = try await (first, second)
+
+        #expect(results.0.map(\.id) == [DemoData.pattern.id])
+        #expect(results.1.map(\.id) == [DemoData.pattern.id])
+        #expect(await counter.requestCount == 1)
+    }
+
+    @Test func failedRevalidationKeepsTheLastGoodSnapshot() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "StitchlyCacheTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = AppDataCache(storageDirectory: directory)
+        await cache.store(patterns: [DemoData.pattern], for: "maker")
+        let client = APIClient(token: "test") { _ in throw URLError(.notConnectedToInternet) }
+
+        do {
+            _ = try await cache.refreshPatterns(for: "maker", client: client)
+            Issue.record("Expected refresh to fail")
+        } catch {
+            #expect(await cache.cachedPatterns(for: "maker")?.value.map(\.id) == [DemoData.pattern.id])
+        }
+    }
+}
+
+private actor CacheRequestCounter {
+    private(set) var requestCount = 0
+
+    func patternResponse(for request: URLRequest) async throws -> (Data, URLResponse) {
+        requestCount += 1
+        try await Task.sleep(for: .milliseconds(100))
+        let data = try JSONEncoder().encode(PatternListResponse(patterns: [DemoData.pattern]))
+        let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        return (data, response)
+    }
 }
