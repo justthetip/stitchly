@@ -56,8 +56,7 @@ struct HomeView: View {
                             Text("Ready to keep making?").font(.largeTitle.bold()).foregroundStyle(Color.ink)
                             VStack(alignment: .leading, spacing: 14) {
                                 HStack(alignment: .top, spacing: 14) {
-                                    AuthenticatedCoverImage(path: project.coverUrl, fallbackAsset: "ProjectFallback")
-                                        .frame(width: 88, height: 88)
+                                    ListCoverThumbnail(path: project.coverUrl, fallbackAsset: "ProjectFallback", size: 88)
                                     VStack(alignment: .leading, spacing: 5) {
                                         Label("Current project", systemImage: "sparkles").font(.headline).foregroundStyle(Color.brandPink)
                                         Text(project.name).font(.title2.bold()).foregroundStyle(Color.ink)

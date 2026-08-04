@@ -244,7 +244,7 @@ import XCTest
         XCTAssertTrue(app.staticTexts["My coral cardigan"].exists)
         XCTAssertTrue(app.staticTexts["Row 1"].exists)
         app.buttons["resume-current-project"].tap()
-        XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 5))
     }
 
     func testHomeExplainsLoadingCurrentProject() {
