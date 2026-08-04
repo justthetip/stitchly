@@ -8,8 +8,8 @@ import XCTest
         app.launchArguments = ["-demo", "-projectsDemo", "-resetDemoReaderProgressForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["My coral cardigan"].exists)
-        app.staticTexts["My coral cardigan"].tap()
+        XCTAssertTrue(app.staticTexts["My Fruity Friends"].exists)
+        app.staticTexts["My Fruity Friends"].tap()
         XCTAssertTrue(app.navigationBars["Project overview"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["Used the coral marker at the side seam."].exists)
         app.buttons["continue-project"].tap()
@@ -38,7 +38,7 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Cuff"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["Finish project"].isHittable)
         app.buttons["Finish project"].tap()
-        XCTAssertTrue(app.staticTexts["You finished My coral cardigan!"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["You finished My Fruity Friends!"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["Congratulations — your project is marked complete and stays available with its instructions and notes."].exists)
         app.buttons["completion-done"].tap()
         XCTAssertTrue(app.navigationBars["Project overview"].waitForExistence(timeout: 3))
@@ -50,9 +50,9 @@ import XCTest
         app.launchArguments = ["-demo", "-libraryDemo", "-skipFirstLaunchSplashForUITests", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
         XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Wildflower Cardigan"].exists)
+        XCTAssertTrue(app.staticTexts["Fruity Friends"].exists)
         XCTAssertTrue(app.buttons["Import"].isHittable)
-        app.staticTexts["Wildflower Cardigan"].tap()
+        app.staticTexts["Fruity Friends"].tap()
         XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
         for _ in 0..<2 where !app.staticTexts["Back panel"].exists { app.swipeUp() }
         XCTAssertTrue(app.staticTexts["Back panel"].waitForExistence(timeout: 3))
@@ -64,15 +64,18 @@ import XCTest
         let app = XCUIApplication()
         app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-showAuthForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
+        XCTAssertTrue(app.buttons["Continue with Apple"].waitForExistence(timeout: 5))
+        let emailChoice = app.buttons["continue-with-email"]
+        XCTAssertTrue(emailChoice.isHittable)
+        emailChoice.tap()
         let email = app.textFields["Email address"]
         let password = app.secureTextFields["Password"]
-        XCTAssertTrue(email.waitForExistence(timeout: 5))
+        XCTAssertTrue(email.waitForExistence(timeout: 3))
         XCTAssertTrue(password.exists)
         XCTAssertTrue(email.isHittable)
         XCTAssertTrue(password.isHittable)
         XCTAssertGreaterThanOrEqual(app.buttons["toggle-password-visibility"].frame.height, 44)
         XCTAssertTrue(app.buttons["Sign in"].exists)
-        XCTAssertTrue(app.buttons["Continue with Apple"].exists)
         try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
     }
 
@@ -91,8 +94,11 @@ import XCTest
         app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-showAuthForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
 
+        let emailChoice = app.buttons["continue-with-email"]
+        XCTAssertTrue(emailChoice.waitForExistence(timeout: 5))
+        emailChoice.tap()
         let email = app.textFields["Email address"]
-        XCTAssertTrue(email.waitForExistence(timeout: 5))
+        XCTAssertTrue(email.waitForExistence(timeout: 3))
         app.buttons["Sign in"].tap()
         XCTAssertTrue(app.staticTexts["auth-validation-message"].exists)
 
@@ -161,12 +167,18 @@ import XCTest
 
         XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Library"].tap()
-        XCTAssertTrue(app.staticTexts["Wildflower Cardigan"].waitForExistence(timeout: 5))
-        app.staticTexts["Wildflower Cardigan"].tap()
+        XCTAssertTrue(app.staticTexts["Fruity Friends"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Mini Whale"].exists)
+        XCTAssertTrue(app.staticTexts["The Perfect Granny Square"].exists)
+        app.staticTexts["Fruity Friends"].tap()
         XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
+        app.buttons["pattern-original-pdf"].tap()
+        XCTAssertTrue(app.navigationBars["Fruity Friends"].waitForExistence(timeout: 3))
+        app.buttons["Done"].tap()
         app.buttons["start-pattern-project"].tap()
         XCTAssertTrue(app.staticTexts["Create an account to start a project"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["New here? Create an account"].exists)
+        XCTAssertTrue(app.buttons["Continue with Apple"].exists)
+        XCTAssertTrue(app.buttons["continue-with-email"].exists)
         app.buttons["Cancel"].tap()
         XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
     }
@@ -211,7 +223,7 @@ import XCTest
         XCTAssertTrue(loading.waitForExistence(timeout: 3))
         XCTAssertTrue(app.descendants(matching: .any)["branded-loading-state"].exists)
         XCTAssertTrue(loading.label.contains("Loading your pattern library…"))
-        XCTAssertTrue(app.staticTexts["Wildflower Cardigan"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Fruity Friends"].waitForExistence(timeout: 3))
     }
 
     func testProjectsEmptyStatePresentsOneCreationFlow() {
@@ -270,7 +282,7 @@ import XCTest
         app.launchArguments = ["-demo", "-resetDemoReaderProgressForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["My coral cardigan"].exists)
+        XCTAssertTrue(app.staticTexts["My Fruity Friends"].exists)
         XCTAssertTrue(app.staticTexts["Row 1"].exists)
         app.buttons["resume-current-project"].tap()
         XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 5))
@@ -300,7 +312,7 @@ import XCTest
         app.launchArguments = ["-demo", "-projectsDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 5))
-        app.staticTexts["My coral cardigan"].tap()
+        app.staticTexts["My Fruity Friends"].tap()
         XCTAssertTrue(app.navigationBars["Project overview"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["project-original-pdf"].exists)
         app.buttons["complete-project"].tap()
@@ -315,12 +327,12 @@ import XCTest
         app.launchArguments = ["-demo", "-projectsDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 5))
-        let project = app.staticTexts["My coral cardigan"]
+        let project = app.staticTexts["My Fruity Friends"]
         XCTAssertTrue(project.exists)
         project.swipeLeft()
-        app.buttons["Delete My coral cardigan"].tap()
-        XCTAssertTrue(app.buttons["Delete My coral cardigan"].waitForExistence(timeout: 3))
-        app.buttons["Delete My coral cardigan"].tap()
+        app.buttons["Delete My Fruity Friends"].tap()
+        XCTAssertTrue(app.buttons["Delete My Fruity Friends"].waitForExistence(timeout: 3))
+        app.buttons["Delete My Fruity Friends"].tap()
         XCTAssertTrue(app.staticTexts["Start your first project"].waitForExistence(timeout: 3))
     }
 
@@ -329,12 +341,12 @@ import XCTest
         app.launchArguments = ["-demo", "-libraryDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 5))
-        let pattern = app.staticTexts["Wildflower Cardigan"]
+        let pattern = app.staticTexts["Fruity Friends"]
         XCTAssertTrue(pattern.exists)
         pattern.swipeLeft()
-        app.buttons["Delete Wildflower Cardigan"].tap()
-        XCTAssertTrue(app.buttons["Delete Wildflower Cardigan"].waitForExistence(timeout: 3))
-        app.buttons["Delete Wildflower Cardigan"].tap()
+        app.buttons["Delete Fruity Friends"].tap()
+        XCTAssertTrue(app.buttons["Delete Fruity Friends"].waitForExistence(timeout: 3))
+        app.buttons["Delete Fruity Friends"].tap()
         XCTAssertTrue(app.staticTexts["Try your first pattern"].waitForExistence(timeout: 3))
     }
 

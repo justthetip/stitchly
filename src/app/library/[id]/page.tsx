@@ -8,7 +8,7 @@ import { ScreenHeader } from "@/components/screen-header";
 import { PatternCover } from "@/components/pattern-cover";
 import { AccountGateButton } from "@/components/account-gate";
 import { authClient } from "@/lib/auth-client";
-import { demoInstructions, demoPattern } from "@/lib/demo-data";
+import { demoInstructions, demoPattern, isDemoPattern } from "@/lib/demo-data";
 import {
   instructionLabel,
   type PatternInstructionRecord,
@@ -43,7 +43,7 @@ export default function PatternDetailPage() {
     if (bundled) {
       const timer = setTimeout(() => {
         setPattern(bundled);
-        setInstructions(demoInstructions);
+        setInstructions(demoInstructions(bundled.id));
         setLoading(false);
       }, 0);
       return () => clearTimeout(timer);
@@ -139,7 +139,7 @@ export default function PatternDetailPage() {
             label="Confidence"
             value={uncertain ? `${uncertain} to check` : "Reviewed"}
           />
-          <Stat label="File" value={pattern.id === "pattern-demo" ? "Demo" : "Private"} />
+          <Stat label="File" value={isDemoPattern(pattern.id) ? "Demo" : "Private"} />
         </div>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           {session.data?.user ? (
@@ -151,10 +151,10 @@ export default function PatternDetailPage() {
               <Play className="size-4" />Start a project
             </AccountGateButton>
           )}
-          {pattern.id === "pattern-demo" ? (
-            <button disabled className="flex flex-1 items-center justify-center gap-2 rounded-2xl border bg-white px-5 py-4 font-heading text-sm font-extrabold opacity-60">
-              <FileText className="size-4" />Demo PDF coming next
-            </button>
+          {isDemoPattern(pattern.id) ? (
+            <a href={demoPattern(pattern.id)?.pdf_url} target="_blank" rel="noreferrer" className="flex flex-1 items-center justify-center gap-2 rounded-2xl border bg-white px-5 py-4 font-heading text-sm font-extrabold">
+              <FileText className="size-4" />Open original PDF
+            </a>
           ) : (
             <a href={`/api/patterns/${pattern.id}/original`} target="_blank" rel="noreferrer" className="flex flex-1 items-center justify-center gap-2 rounded-2xl border bg-white px-5 py-4 font-heading text-sm font-extrabold">
               <FileText className="size-4" />Open original PDF
@@ -200,9 +200,9 @@ export default function PatternDetailPage() {
         <div className="mt-7 flex items-start gap-3 rounded-2xl bg-[#17324d] p-4 text-white">
           <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[#59c3eb]" />
           <div>
-            <p className="text-sm font-extrabold">{pattern.id === "pattern-demo" ? "Safe to explore" : "Private to your account"}</p>
+            <p className="text-sm font-extrabold">{isDemoPattern(pattern.id) ? "Safe to explore" : "Private to your account"}</p>
             <p className="mt-1 text-xs leading-relaxed text-white/65">
-              {pattern.id === "pattern-demo" ? "This bundled example is separate from private account data. Sign in only when you want to save or upload." : "The original is streamed through Stitchly only after ownership is checked. Its Blob URL is never public."}
+              {isDemoPattern(pattern.id) ? "This bundled example is separate from private account data. Sign in only when you want to save or upload." : "The original is streamed through Stitchly only after ownership is checked. Its Blob URL is never public."}
             </p>
           </div>
         </div>

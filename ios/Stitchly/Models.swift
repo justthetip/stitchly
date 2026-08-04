@@ -139,16 +139,50 @@ struct UploadTokenResponse: Codable { let clientToken: String }
 struct BlobResponse: Codable { let url: URL }
 
 enum DemoData {
-    static let pattern = Pattern(id: "pattern-demo", name: "Wildflower Cardigan", designer: "Stitchly Studio", craft: "crochet", difficulty: "Intermediate", yarn: "DK cotton", tool: "4 mm hook", totalInstructions: 18, source: "PDF", pageCount: 8)
-    static let instructions = [
-        Instruction(id: "i1", position: 1, section: "Back panel", instructionKind: "setup", sourceLabel: "Foundation", instructions: "Chain 72 loosely. Turn, working into the back bumps for a neat lower edge.", notes: "Keep the foundation chain relaxed.", stitchCount: 72, optional: false),
-        Instruction(id: "i2", position: 2, section: "Back panel", instructionKind: "row", sourceLabel: "Row 1", instructions: "Double crochet in the fourth chain from the hook and in every chain across. Turn.", notes: nil, stitchCount: 70, optional: false),
-        Instruction(id: "i3", position: 3, section: "Back panel", instructionKind: "row", sourceLabel: "Row 2", instructions: "Chain 3, skip the first stitch, double crochet across. Turn.", notes: "Repeat this row until the panel measures 38 cm.", stitchCount: 70, optional: false),
-        Instruction(id: "i4", position: 4, section: "Left front", instructionKind: "setup", sourceLabel: "Foundation", instructions: "Chain 38 loosely for the left front panel.", notes: nil, stitchCount: 38, optional: false),
-        Instruction(id: "i5", position: 5, section: "Left front", instructionKind: "row", sourceLabel: "Row 1", instructions: "Double crochet across, keeping the front edge relaxed.", notes: nil, stitchCount: 36, optional: false),
-        Instruction(id: "i6", position: 6, section: "Sleeves", instructionKind: "setup", sourceLabel: "Cuff", instructions: "Work the cuff ribbing to the required wrist measurement.", notes: "Make two matching sleeves.", stitchCount: nil, optional: false)
-    ]
-    static let project = Project(id: "project-demo", patternId: pattern.id, name: "My coral cardigan", status: "active", yarn: "Coral merino blend", currentInstruction: 2, patternName: pattern.name, totalInstructions: 18, craft: "crochet")
+    private struct Catalog: Decodable {
+        let patterns: [Pattern]
+        let instructions: [String: [Instruction]]
+        let project: Project
+    }
+
+    private static let catalog: Catalog = {
+        guard let url = Bundle.main.url(forResource: "demo-catalog", withExtension: "json"),
+              let data = try? Data(contentsOf: url) else {
+            fatalError("The bundled demo catalog is missing.")
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let catalog = try? decoder.decode(Catalog.self, from: data) else {
+            fatalError("The bundled demo catalog could not be decoded.")
+        }
+        return catalog
+    }()
+
+    static let patterns = catalog.patterns
+    static let pattern = patterns[0]
+    static let project = catalog.project
+    static let instructions = instructions(for: pattern.id)
+
+    static func instructions(for patternID: String) -> [Instruction] {
+        catalog.instructions[patternID] ?? []
+    }
+
+    static func pdfResource(for patternID: String) -> String? {
+        switch patternID {
+        case "demo-fruity-friends": "fruity-friends"
+        case "demo-mini-whale": "mini-whale"
+        case "demo-perfect-granny-square": "perfect-granny-square"
+        default: nil
+        }
+    }
+
+    static func isDemoPattern(_ patternID: String) -> Bool {
+        pdfResource(for: patternID) != nil
+    }
+
+    static func isDemoProject(_ projectID: String) -> Bool {
+        projectID == project.id
+    }
     static let repeatInstructions = (9...72).map { row in
         Instruction(
             id: "headband-row-\(row)", position: row, section: "Headband", instructionKind: "row",

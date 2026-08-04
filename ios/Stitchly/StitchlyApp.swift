@@ -30,6 +30,7 @@ struct RootView: View {
             else if auth.isRestoring { LoadingStateView(title: "Opening Stitchly", message: "Restoring your secure session and syncing your account.") }
             else if shouldShowOnboarding { OnboardingView { hasCompletedOnboarding = true } }
             else if arguments.contains("-showAuthForUITests") { SignInView() }
+            else if arguments.contains("-projectOverviewDemo") { NavigationStack { ProjectOverviewView(project: DemoData.project) {} } }
             else if ProcessInfo.processInfo.arguments.contains("-patternDemo") { NavigationStack { PatternDetailView(pattern: DemoData.pattern) } }
             else if ProcessInfo.processInfo.arguments.contains("-readerSectionsDemo") { NavigationStack { ReaderView(project: DemoData.project, showSectionsInitially: true) } }
             else if ProcessInfo.processInfo.arguments.contains("-readerRepeatDemo") { NavigationStack { ReaderView(project: DemoData.repeatProject) } }
@@ -96,6 +97,7 @@ struct SignInView: View {
     @State private var password = ""
     @State private var name = ""
     @State private var createAccount = false
+    @State private var emailExpanded = ProcessInfo.processInfo.arguments.contains("-authSubmittingDemo")
     @State private var showPassword = false
     @State private var hasAttemptedSubmit = false
     @State private var isSubmitting = ProcessInfo.processInfo.arguments.contains("-authSubmittingDemo")
@@ -127,114 +129,138 @@ struct SignInView: View {
         ZStack {
             LinearGradient(colors: [.cream, .white, .brandPink.opacity(0.16)], startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
             ScrollView {
-                VStack(spacing: 22) {
-                    Image("BrandIcon").resizable().scaledToFit().frame(width: 108, height: 108).clipShape(.rect(cornerRadius: 24)).shadow(color: .brandPink.opacity(0.22), radius: 20, y: 10)
-                    VStack(spacing: 6) { Text("Stitchly").font(.system(.largeTitle, design: .rounded, weight: .bold)).foregroundStyle(Color.ink); Text(createAccount ? "Create your maker space." : "Welcome back, maker.").font(.title3).foregroundStyle(.secondary) }
+                VStack(spacing: 18) {
+                    Image("BrandIcon").resizable().scaledToFit().frame(width: 82, height: 82).clipShape(.rect(cornerRadius: 20)).shadow(color: .brandPink.opacity(0.2), radius: 16, y: 8)
+                    Text("Stitchly").font(.system(.largeTitle, design: .rounded, weight: .bold)).foregroundStyle(Color.ink)
                     if let contextTitle {
-                        VStack(spacing: 6) {
-                            Text(contextTitle)
-                                .font(.headline)
-                                .foregroundStyle(Color.ink)
-                                .multilineTextAlignment(.center)
-                            if let contextMessage {
-                                Text(contextMessage)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                        }
-                        .padding(14)
+                        Label(contextTitle, systemImage: "icloud.and.arrow.up")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.ink)
+                            .multilineTextAlignment(.center)
+                            .padding(12)
                         .frame(maxWidth: .infinity)
                         .background(Color.white.opacity(0.72), in: .rect(cornerRadius: 16))
                         .accessibilityElement(children: .combine)
+                        .accessibilityHint(contextMessage ?? "")
                         .accessibilityIdentifier("authentication-context")
+                    } else {
+                        Text("Save your projects and pick up anywhere.")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.ink)
                     }
-                    Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account", action: toggleMode)
-                        .font(.subheadline.weight(.semibold)).tint(.ink).frame(minHeight: 44).contentShape(.rect).disabled(isWorking)
-                    VStack(spacing: 12) {
-                        if createAccount {
-                            authField("Your name", icon: "person", focus: .name, isInvalid: hasAttemptedSubmit && nameIsInvalid) {
-                                TextField("", text: $name)
-                                    .textContentType(.name)
-                                    .textInputAutocapitalization(.words)
+                    if emailExpanded {
+                        Button {
+                            guard !isWorking else { return }
+                            focusedField = nil
+                            withAnimation { emailExpanded = false }
+                        } label: {
+                            Label("Use another sign-in option", systemImage: "chevron.left")
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                                .contentShape(.rect)
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .tint(.ink)
+                        .buttonStyle(.plain)
+                        .disabled(isWorking)
+                        VStack(spacing: 12) {
+                            if createAccount {
+                                authField("Your name", icon: "person", focus: .name, isInvalid: hasAttemptedSubmit && nameIsInvalid) {
+                                    TextField("", text: $name)
+                                        .textContentType(.name)
+                                        .textInputAutocapitalization(.words)
+                                        .submitLabel(.next)
+                                        .padding(.vertical, 16)
+                                        .focused($focusedField, equals: .name)
+                                        .onSubmit { focusedField = .email }
+                                        .accessibilityLabel("Your name")
+                                        .accessibilityHint(hasAttemptedSubmit && nameIsInvalid ? "Required" : "")
+                                        .accessibilityIdentifier("auth-name-field")
+                                }
+                            }
+                            authField("Email address", icon: "envelope", focus: .email, isInvalid: hasAttemptedSubmit && emailIsInvalid) {
+                                TextField("", text: $email)
+                                    .textContentType(.emailAddress)
+                                    .textInputAutocapitalization(.never)
+                                    .keyboardType(.emailAddress)
+                                    .autocorrectionDisabled()
                                     .submitLabel(.next)
                                     .padding(.vertical, 16)
-                                    .focused($focusedField, equals: .name)
-                                    .onSubmit { focusedField = .email }
-                                    .accessibilityLabel("Your name")
-                                    .accessibilityHint(hasAttemptedSubmit && nameIsInvalid ? "Required" : "")
-                                    .accessibilityIdentifier("auth-name-field")
+                                    .focused($focusedField, equals: .email)
+                                    .onSubmit { focusedField = .password }
+                                    .accessibilityLabel("Email address")
+                                    .accessibilityHint(hasAttemptedSubmit && emailIsInvalid ? "Enter a valid email address" : "")
+                                    .accessibilityIdentifier("auth-email-field")
                             }
-                        }
-                        authField("Email address", icon: "envelope", focus: .email, isInvalid: hasAttemptedSubmit && emailIsInvalid) {
-                            TextField("", text: $email)
-                                .textContentType(.emailAddress)
-                                .textInputAutocapitalization(.never)
-                                .keyboardType(.emailAddress)
-                                .autocorrectionDisabled()
-                                .submitLabel(.next)
-                                .padding(.vertical, 16)
-                                .focused($focusedField, equals: .email)
-                                .onSubmit { focusedField = .password }
-                                .accessibilityLabel("Email address")
-                                .accessibilityHint(hasAttemptedSubmit && emailIsInvalid ? "Enter a valid email address" : "")
-                                .accessibilityIdentifier("auth-email-field")
-                        }
-                        authField("Password", icon: "lock", focus: .password, isInvalid: hasAttemptedSubmit && passwordIsInvalid) {
-                            HStack(spacing: 4) {
-                                Group {
-                                    if showPassword {
-                                        TextField("", text: $password)
-                                    } else {
-                                        SecureField("", text: $password)
+                            authField("Password", icon: "lock", focus: .password, isInvalid: hasAttemptedSubmit && passwordIsInvalid) {
+                                HStack(spacing: 4) {
+                                    Group {
+                                        if showPassword { TextField("", text: $password) }
+                                        else { SecureField("", text: $password) }
                                     }
+                                    .textContentType(createAccount ? .newPassword : .password)
+                                    .submitLabel(.go)
+                                    .padding(.vertical, 16)
+                                    .focused($focusedField, equals: .password)
+                                    .onSubmit(submit)
+                                    .accessibilityLabel("Password")
+                                    .accessibilityHint(hasAttemptedSubmit && passwordIsInvalid ? "Use at least 8 characters" : "")
+                                    .accessibilityIdentifier("auth-password-field")
+                                    Button {
+                                        showPassword.toggle()
+                                        Task { await Task.yield(); focusedField = .password }
+                                    } label: {
+                                        Image(systemName: showPassword ? "eye.slash" : "eye")
+                                            .font(.system(size: 20, weight: .semibold))
+                                            .frame(width: 48, height: 48)
+                                            .contentShape(.rect)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .foregroundStyle(Color.ink)
+                                    .accessibilityLabel(showPassword ? "Hide password" : "Show password")
+                                    .accessibilityIdentifier("toggle-password-visibility")
                                 }
-                                .textContentType(createAccount ? .newPassword : .password)
-                                .submitLabel(.go)
-                                .padding(.vertical, 16)
-                                .focused($focusedField, equals: .password)
-                                .onSubmit(submit)
-                                .accessibilityLabel("Password")
-                                .accessibilityHint(hasAttemptedSubmit && passwordIsInvalid ? "Use at least 8 characters" : "")
-                                .accessibilityIdentifier("auth-password-field")
-                                Button {
-                                    showPassword.toggle()
-                                    Task { await Task.yield(); focusedField = .password }
-                                } label: {
-                                    Image(systemName: showPassword ? "eye.slash" : "eye")
-                                        .font(.system(size: 20, weight: .semibold))
-                                        .frame(width: 48, height: 48)
-                                        .contentShape(.rect)
-                                }
-                                .buttonStyle(.plain)
-                                .foregroundStyle(Color.ink)
-                                .accessibilityLabel(showPassword ? "Hide password" : "Show password")
-                                .accessibilityIdentifier("toggle-password-visibility")
+                            }
+                            if let validationMessage {
+                                Label(validationMessage, systemImage: "exclamationmark.circle.fill")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.red)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .accessibilityIdentifier("auth-validation-message")
                             }
                         }
-                        if let validationMessage {
-                            Label(validationMessage, systemImage: "exclamationmark.circle.fill")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.red)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .accessibilityIdentifier("auth-validation-message")
+                        Button(action: submit) {
+                            AuthSubmitButtonLabel(
+                                idleText: createAccount ? "Create account" : "Sign in",
+                                loadingText: createAccount ? "Creating your account…" : "Signing you in…",
+                                isLoading: isWorking
+                            )
                         }
+                        .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
+                        .allowsHitTesting(!isWorking)
+                        .accessibilityIdentifier("auth-submit-button")
+                        Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account", action: toggleMode)
+                            .font(.subheadline.weight(.semibold))
+                            .tint(.ink)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .contentShape(.rect)
+                            .disabled(isWorking)
+                    } else {
+                        SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
+                            .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(isWorking)
+                        Button {
+                            withAnimation { emailExpanded = true }
+                        } label: {
+                            Label("Continue with email", systemImage: "envelope.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.ink)
+                        .controlSize(.large)
+                        .disabled(isWorking)
+                        .accessibilityIdentifier("continue-with-email")
                     }
-                    Button(action: submit) {
-                        AuthSubmitButtonLabel(
-                            idleText: createAccount ? "Create account" : "Sign in",
-                            loadingText: createAccount ? "Creating your account…" : "Signing you in…",
-                            isLoading: isWorking
-                        )
-                    }
-                    .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
-                    .allowsHitTesting(!isWorking)
-                    .accessibilityIdentifier("auth-submit-button")
-                    HStack { Rectangle().frame(height: 1); Text("or").font(.footnote.weight(.semibold)); Rectangle().frame(height: 1) }.foregroundStyle(Color.ink.opacity(0.72))
-                    SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
-                        .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(isWorking)
                     Text("Your patterns stay private and belong to you.").font(.footnote).foregroundStyle(Color.ink)
-                }.padding(28).padding(.top, 24)
+                }.padding(28).padding(.top, 12)
             }
             .accessibilityIdentifier("auth-scroll-view")
             .scrollDismissesKeyboard(.immediately)

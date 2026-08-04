@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		13B65565E9D774D5AE4989D0 /* StitchlyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761106EF997B9870971DA39A /* StitchlyTests.swift */; };
 		1AD6D4C4287A840B0642360E /* StitchlyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35B38BE7439864A8B02638C /* StitchlyApp.swift */; };
+		3E992C75B3AD5863DB043901 /* mini-whale.pdf in Resources */ = {isa = PBXBuildFile; fileRef = FBF53E8EC80F252B966910FD /* mini-whale.pdf */; };
 		4132819D1249F19AEB283B6B /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B5292D329738A085F62B463 /* AuthManager.swift */; };
 		463145A1B7737B67AA624168 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */; };
 		49D7B6650ED27275AB1BA9CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5F144145528B63171AD36E0E /* Assets.xcassets */; };
@@ -16,12 +17,18 @@
 		6FC376CE71AA58E992857736 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BF2580FCC98BF2993759CA97 /* LaunchScreen.storyboard */; };
 		728E3BC82D2C735FDF02A3F9 /* OriginalPDFView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F558BCE4AE79FB9A1DDC66 /* OriginalPDFView.swift */; };
 		7AAECFC44F62BF501A381C43 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2816538EED2221611A1801B4 /* Models.swift */; };
+		820FE1B939C7A113D272F14F /* mini-whale-cover.png in Resources */ = {isa = PBXBuildFile; fileRef = 13672D6D5535FB8E3CC60B5A /* mini-whale-cover.png */; };
 		93ADAD6FC413C6DB3C89814D /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815A74C9D4BBFC5D122B0928 /* AccountView.swift */; };
 		9B429D4021B14992165E876F /* ReviewPromptPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA911B0FB4FCFA1FCD537052 /* ReviewPromptPolicy.swift */; };
 		9D18D04834E28D5F7B6F7204 /* StitchlyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB3E3A95E4217D5578C0845 /* StitchlyUITests.swift */; };
+		A74A1F4F5A2F012B8C0BB35C /* fruity-friends.pdf in Resources */ = {isa = PBXBuildFile; fileRef = EF0640D04CA194D1BC9F91C7 /* fruity-friends.pdf */; };
+		AF383C7039C095AE2DAFD4EC /* perfect-granny-square-cover.png in Resources */ = {isa = PBXBuildFile; fileRef = E9C806807DA09DC4D9A4193A /* perfect-granny-square-cover.png */; };
+		B0FD98BEE87F6EA7F6090F70 /* fruity-friends-cover.png in Resources */ = {isa = PBXBuildFile; fileRef = 852371ACDE8D29643AF63CE8 /* fruity-friends-cover.png */; };
+		B816DFFA75BE6D3BEA7656E9 /* perfect-granny-square.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 22F907F2B8AD369588E41F97 /* perfect-granny-square.pdf */; };
 		BAF7C2DEF383F1C6B39FD9EB /* LibraryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */; };
 		BCDAAAB1E28B9386A5B06621 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83F84F149B7E2B4A0682623D /* Telemetry.swift */; };
 		BE8B60903D55DFC210A87738 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E0C769A63C577B2B309AD2 /* APIClient.swift */; };
+		BFFAC1F8BD3F4DFDAEAC61F6 /* demo-catalog.json in Resources */ = {isa = PBXBuildFile; fileRef = 1392C2470A2AD889669D7FE5 /* demo-catalog.json */; };
 		E57F10F94BAFCC1C429E1253 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF0001CD284F0E186D51EF85 /* OnboardingView.swift */; };
 		E956EED2D8BEB4E1BD75A197 /* ProjectViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */; };
 /* End PBXBuildFile section */
@@ -45,6 +52,9 @@
 
 /* Begin PBXFileReference section */
 		01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectViews.swift; sourceTree = "<group>"; };
+		13672D6D5535FB8E3CC60B5A /* mini-whale-cover.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "mini-whale-cover.png"; sourceTree = "<group>"; };
+		1392C2470A2AD889669D7FE5 /* demo-catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "demo-catalog.json"; sourceTree = "<group>"; };
+		22F907F2B8AD369588E41F97 /* perfect-granny-square.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "perfect-granny-square.pdf"; sourceTree = "<group>"; };
 		2816538EED2221611A1801B4 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		2DB3E3A95E4217D5578C0845 /* StitchlyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchlyUITests.swift; sourceTree = "<group>"; };
 		4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -54,6 +64,7 @@
 		806CE3EF509AEF3EBB9E2E3A /* StitchlyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = StitchlyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		815A74C9D4BBFC5D122B0928 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		83F84F149B7E2B4A0682623D /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
+		852371ACDE8D29643AF63CE8 /* fruity-friends-cover.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "fruity-friends-cover.png"; sourceTree = "<group>"; };
 		85F558BCE4AE79FB9A1DDC66 /* OriginalPDFView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalPDFView.swift; sourceTree = "<group>"; };
 		9743005EF2C4DF91DA57169F /* DataCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataCache.swift; sourceTree = "<group>"; };
 		9B5292D329738A085F62B463 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
@@ -65,10 +76,27 @@
 		E1E0C769A63C577B2B309AD2 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViews.swift; sourceTree = "<group>"; };
 		E5FAA1B8DE263DC7D95E86EF /* StitchlyUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = StitchlyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E9C806807DA09DC4D9A4193A /* perfect-granny-square-cover.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "perfect-granny-square-cover.png"; sourceTree = "<group>"; };
+		EF0640D04CA194D1BC9F91C7 /* fruity-friends.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "fruity-friends.pdf"; sourceTree = "<group>"; };
 		F35B38BE7439864A8B02638C /* StitchlyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchlyApp.swift; sourceTree = "<group>"; };
+		FBF53E8EC80F252B966910FD /* mini-whale.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "mini-whale.pdf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		013C52D78951E7B2D1FCABC8 /* Demo */ = {
+			isa = PBXGroup;
+			children = (
+				1392C2470A2AD889669D7FE5 /* demo-catalog.json */,
+				852371ACDE8D29643AF63CE8 /* fruity-friends-cover.png */,
+				EF0640D04CA194D1BC9F91C7 /* fruity-friends.pdf */,
+				13672D6D5535FB8E3CC60B5A /* mini-whale-cover.png */,
+				FBF53E8EC80F252B966910FD /* mini-whale.pdf */,
+				E9C806807DA09DC4D9A4193A /* perfect-granny-square-cover.png */,
+				22F907F2B8AD369588E41F97 /* perfect-granny-square.pdf */,
+			);
+			path = Demo;
+			sourceTree = "<group>";
+		};
 		2C28AB2B8FA36AEA16115D72 = {
 			isa = PBXGroup;
 			children = (
@@ -99,6 +127,7 @@
 				C944A7AFC60449A5D4329DAB /* Stitchly.entitlements */,
 				F35B38BE7439864A8B02638C /* StitchlyApp.swift */,
 				83F84F149B7E2B4A0682623D /* Telemetry.swift */,
+				013C52D78951E7B2D1FCABC8 /* Demo */,
 			);
 			path = Stitchly;
 			sourceTree = "<group>";
@@ -239,6 +268,13 @@
 				49D7B6650ED27275AB1BA9CC /* Assets.xcassets in Resources */,
 				6FC376CE71AA58E992857736 /* LaunchScreen.storyboard in Resources */,
 				463145A1B7737B67AA624168 /* PrivacyInfo.xcprivacy in Resources */,
+				BFFAC1F8BD3F4DFDAEAC61F6 /* demo-catalog.json in Resources */,
+				B0FD98BEE87F6EA7F6090F70 /* fruity-friends-cover.png in Resources */,
+				A74A1F4F5A2F012B8C0BB35C /* fruity-friends.pdf in Resources */,
+				820FE1B939C7A113D272F14F /* mini-whale-cover.png in Resources */,
+				3E992C75B3AD5863DB043901 /* mini-whale.pdf in Resources */,
+				AF383C7039C095AE2DAFD4EC /* perfect-granny-square-cover.png in Resources */,
+				B816DFFA75BE6D3BEA7656E9 /* perfect-granny-square.pdf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -331,7 +367,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -443,7 +479,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

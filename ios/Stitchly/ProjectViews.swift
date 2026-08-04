@@ -260,10 +260,12 @@ struct ProjectOverviewView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     AuthenticatedCoverImage(path: project.coverUrl, fallbackAsset: "ProjectFallback")
                         .frame(maxWidth: .infinity)
-                        .frame(height: 190)
+                        .frame(minHeight: 190, maxHeight: 190)
+                        .clipped()
+                        .clipShape(.rect(cornerRadius: 14))
                     HStack { CraftBadge(craft: project.craft ?? "pattern"); Spacer(); if isCompleted { Label("Completed", systemImage: "checkmark.seal.fill").foregroundStyle(Color.ink) } }
-                    Text(project.name).font(.largeTitle.bold())
-                    Text(project.patternName ?? "Pattern").font(.headline).foregroundStyle(.secondary)
+                    Text(project.name).font(.largeTitle.bold()).fixedSize(horizontal: false, vertical: true)
+                    Text(project.patternName ?? "Pattern").font(.headline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     ProgressView(value: Double(project.currentInstruction), total: Double(max(project.totalInstructions ?? 1, 1))).tint(.brandOrange)
                     Text("\(currentLabel) · Step \(project.currentInstruction) of \(project.totalInstructions ?? 0)").foregroundStyle(.secondary)
                     if let yarn = project.yarn, !yarn.isEmpty { Label(yarn, systemImage: "circle.fill") }
@@ -300,7 +302,7 @@ struct ProjectOverviewView: View {
         .alert("Couldn’t update project", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("Try again") { Task { await load() } } } message: { Text(error ?? "") }
     }
     private func load() async {
-        if auth.isGuest || auth.token == "demo" { isLoading = true; defer { isLoading = false }; detail = ProjectResponse(project: project, instructions: DemoData.instructions, notes: DemoData.notes); return }
+        if auth.isGuest || auth.token == "demo" { isLoading = true; defer { isLoading = false }; detail = ProjectResponse(project: project, instructions: DemoData.instructions(for: project.patternId), notes: DemoData.notes); return }
         guard let userID = auth.user?.id else { return }
         let cached = await AppDataCache.shared.cachedProjectDetail(for: userID, projectID: project.id)
         if detail == nil, let cached { detail = cached.value }
@@ -585,7 +587,7 @@ struct ReaderView: View {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
             if ProcessInfo.processInfo.arguments.contains("-readerRepeatDemo") { instructions = DemoData.repeatInstructions; position = DemoData.repeatProject.currentInstruction; return }
-            instructions = DemoData.instructions
+            instructions = DemoData.instructions(for: project.patternId)
             let savedPosition = UserDefaults.standard.integer(forKey: "demoReaderPosition")
             position = savedPosition > 0 ? savedPosition : project.currentInstruction
             return
@@ -758,7 +760,7 @@ struct CreateProjectView: View {
         if auth.isGuest || auth.token == "demo" {
             isLoadingPatterns = true; defer { isLoadingPatterns = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
-            patterns = [DemoData.pattern]; selected = initialPattern?.id ?? DemoData.pattern.id
+            patterns = DemoData.patterns; selected = initialPattern?.id ?? DemoData.pattern.id
             return
         }
         guard let userID = auth.user?.id else { return }

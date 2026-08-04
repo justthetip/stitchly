@@ -31,7 +31,7 @@ enum PatternLibraryFiltering {
         if userID == nil || client.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
-            patterns = ProcessInfo.processInfo.arguments.contains("-emptyLibraryDemo") ? [] : [DemoData.pattern]
+            patterns = ProcessInfo.processInfo.arguments.contains("-emptyLibraryDemo") ? [] : DemoData.patterns
             return
         }
         guard let userID else { return }
@@ -185,7 +185,7 @@ struct LibraryView: View {
         } catch { store.error = error.localizedDescription }
     }
     private func importPDF(_ url: URL) async {
-        guard let user = auth.user, auth.token != "demo" else { store.patterns = [DemoData.pattern]; return }
+        guard let user = auth.user, auth.token != "demo" else { store.patterns = DemoData.patterns; return }
         store.loadingMessage = "Uploading \(url.lastPathComponent)…"
         store.isLoading = true; defer { store.isLoading = false }
         Telemetry.shared.track("pdf_import_started")
@@ -358,6 +358,14 @@ struct AuthenticatedCoverImage: View {
         .clipShape(.rect(cornerRadius: 14))
         .task(id: path) {
             image = nil
+            if let path, path.hasPrefix("/demo/"),
+               let resource = path.split(separator: "/").last.map(String.init),
+               let url = Bundle.main.url(forResource: (resource as NSString).deletingPathExtension, withExtension: (resource as NSString).pathExtension),
+               let loaded = UIImage(contentsOfFile: url.path) {
+                image = loaded
+                isLoading = false
+                return
+            }
             guard let path, let userID = auth.user?.id else { isLoading = false; return }
             isLoading = true
             defer { isLoading = false }
@@ -423,7 +431,7 @@ struct PatternDetailView: View {
         if auth.isGuest || auth.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
-            instructions = DemoData.instructions
+            instructions = DemoData.instructions(for: pattern.id)
             return
         }
         guard let userID = auth.user?.id else { return }

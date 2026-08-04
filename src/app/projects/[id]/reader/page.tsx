@@ -22,7 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { AccountGateButton } from "@/components/account-gate";
 import { authClient } from "@/lib/auth-client";
-import { demoInstructions, demoProject } from "@/lib/demo-data";
+import { demoInstructions, demoPattern, demoProject, isDemoProject } from "@/lib/demo-data";
 
 type Project = {
   id: string;
@@ -52,9 +52,10 @@ export default function ReaderPage() {
     if (bundled) {
       const timer = setTimeout(() => {
         setProject(bundled);
-        setInstructions(demoInstructions);
+        const bundledInstructions = demoInstructions(bundled.pattern_id);
+        setInstructions(bundledInstructions);
         setNotes([]);
-        setIndex(Math.max(0, demoInstructions.findIndex((instruction) => instruction.position === bundled.current_instruction)));
+        setIndex(Math.max(0, bundledInstructions.findIndex((instruction) => instruction.position === bundled.current_instruction)));
         setLoading(false);
       }, 0);
       return () => clearTimeout(timer);
@@ -191,7 +192,7 @@ export default function ReaderPage() {
       <div className="px-5 pt-3">
         <Progress value={pct} className="h-1" />
         <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground">
-          <span>Start</span><span>{project.id === "project-demo" ? "Demo · sign in to save" : saving ? "Syncing…" : "Synced"}</span><span>Done</span>
+          <span>Start</span><span>{isDemoProject(project.id) ? "Demo · sign in to save" : saving ? "Syncing…" : "Synced"}</span><span>Done</span>
         </div>
       </div>
       {error && <p className="mx-5 mt-3 rounded-xl bg-red-50 p-2 text-center text-xs font-bold text-red-700">{error}</p>}
@@ -219,7 +220,7 @@ export default function ReaderPage() {
           {instructionNotes.map((note) => <p key={note.id} className="mt-3 rounded-xl bg-secondary/60 p-3 text-xs font-semibold">Your note: {note.body}</p>)}
           <div className="mt-5 flex flex-wrap gap-2">
             {session.data?.user ? <button onClick={() => setNoteOpen(true)} className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><NotebookPen className="size-3.5" />Add note</button> : <AccountGateButton title="Create an account to add notes" message="Notes are private and stay attached to your saved project step." next={`/projects/${project.id}/reader`} className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><NotebookPen className="size-3.5" />Add note</AccountGateButton>}
-            {project.id === "project-demo" ? <span className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold text-muted-foreground"><Eye className="size-3.5" />Source PDF coming next</span> : <a href={`/api/patterns/${project.pattern_id}/original`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><Eye className="size-3.5" />View original</a>}
+            {isDemoProject(project.id) ? <a href={demoPattern(project.pattern_id)?.pdf_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><Eye className="size-3.5" />View original</a> : <a href={`/api/patterns/${project.pattern_id}/original`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><Eye className="size-3.5" />View original</a>}
           </div>
         </div>
       </div>
@@ -237,7 +238,7 @@ export default function ReaderPage() {
             </AccountGateButton>
           )}
         </div>
-        <p className="mt-2 text-center text-[10px] text-muted-foreground">{project.id === "project-demo" ? "Explore freely · create an account when you want to save" : "Progress saves securely to your account"}</p>
+        <p className="mt-2 text-center text-[10px] text-muted-foreground">{isDemoProject(project.id) ? "Explore freely · create an account when you want to save" : "Progress saves securely to your account"}</p>
       </div>
       <Sheet open={noteOpen} onOpenChange={setNoteOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl">

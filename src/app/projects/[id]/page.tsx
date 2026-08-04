@@ -7,7 +7,7 @@ import { ArrowRight, NotebookPen, Play } from "lucide-react";
 import { ScreenHeader } from "@/components/screen-header";
 import { PatternCover } from "@/components/pattern-cover";
 import { Progress } from "@/components/ui/progress";
-import { demoProject } from "@/lib/demo-data";
+import { demoPattern, demoProject, isDemoProject } from "@/lib/demo-data";
 type Project = {
   id: string;
   pattern_id: string;
@@ -111,7 +111,7 @@ export default function ProjectDetailPage() {
           <Link href={`/library/${project.pattern_id}`} className="inline-flex items-center gap-1 text-xs font-extrabold text-primary">
             {project.pattern_name}<ArrowRight className="size-3" />
           </Link>
-          {project.id === "project-demo" ? <span className="text-xs font-extrabold text-muted-foreground">Demo source PDF coming next</span> : <a href={`/api/patterns/${project.pattern_id}/original`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-extrabold text-primary">View original PDF<ArrowRight className="size-3" /></a>}
+          {isDemoProject(project.id) ? <a href={demoPattern(project.pattern_id)?.pdf_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-extrabold text-primary">View original PDF<ArrowRight className="size-3" /></a> : <a href={`/api/patterns/${project.pattern_id}/original`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-extrabold text-primary">View original PDF<ArrowRight className="size-3" /></a>}
         </div>
         <h1 className="font-heading mt-1 text-3xl font-black">
           {project.name}
@@ -129,7 +129,7 @@ export default function ProjectDetailPage() {
               Step {project.current_instruction} of {project.total_instructions}
             </span>
             <span>
-              {project.id === "project-demo" ? "Demo progress · sign in to save" : <>Synced {new Date(project.last_worked_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</>}
+              {isDemoProject(project.id) ? "Demo progress · sign in to save" : <>Synced {new Date(project.last_worked_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</>}
             </span>
           </div>
           <Link
@@ -172,7 +172,7 @@ export default function ProjectDetailPage() {
             </div>
           ) : (
             <p className="mt-3 rounded-2xl border border-dashed bg-white p-5 text-sm text-muted-foreground">
-              {project.id === "project-demo" ? "Demo notes are read-only. Add a note in the reader to create an account." : "No notes yet. Add one against any instruction while making."}
+              {isDemoProject(project.id) ? "Demo notes are read-only. Add a note in the reader to create an account." : "No notes yet. Add one against any instruction while making."}
             </p>
           )}
         </section>

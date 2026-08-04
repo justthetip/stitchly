@@ -44,7 +44,13 @@ struct OriginalPDFView: View {
         error = nil
         defer { isLoading = false }
         if auth.isGuest || auth.token == "demo" {
-            error = "This demo pattern does not include its source PDF yet."
+            guard let resource = DemoData.pdfResource(for: patternID),
+                  let url = Bundle.main.url(forResource: resource, withExtension: "pdf"),
+                  let loaded = PDFDocument(url: url) else {
+                error = "The bundled source PDF could not be opened."
+                return
+            }
+            document = loaded
             return
         }
         do {
