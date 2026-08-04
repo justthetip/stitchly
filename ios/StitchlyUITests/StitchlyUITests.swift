@@ -110,7 +110,9 @@ import XCTest
         let keyboardDone = app.buttons["auth-keyboard-done"]
         if keyboardDone.waitForExistence(timeout: 1) { keyboardDone.tap() }
         let modeSwitch = app.buttons["New here? Create an account"]
-        for _ in 0..<3 where !modeSwitch.isHittable { app.swipeDown() }
+        let authScrollView = app.scrollViews["auth-scroll-view"]
+        XCTAssertTrue(authScrollView.exists)
+        for _ in 0..<6 where !modeSwitch.isHittable { authScrollView.swipeDown() }
         XCTAssertTrue(modeSwitch.isHittable)
         modeSwitch.tap()
         let name = app.textFields["Your name"]

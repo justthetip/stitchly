@@ -196,6 +196,7 @@ struct SignInView: View {
                     Text("Your patterns stay private and belong to you.").font(.footnote).foregroundStyle(Color.ink)
                 }.padding(28).padding(.top, 24)
             }
+            .accessibilityIdentifier("auth-scroll-view")
             .scrollDismissesKeyboard(.immediately)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if focusedField != nil {
