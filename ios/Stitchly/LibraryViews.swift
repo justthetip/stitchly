@@ -302,9 +302,25 @@ struct PatternRow: View {
     let pattern: Pattern
     var body: some View {
         HStack(spacing: 14) {
-            AuthenticatedCoverImage(path: pattern.coverUrl, fallbackAsset: "PatternFallback").frame(width: 58, height: 58)
+            ListCoverThumbnail(path: pattern.coverUrl, fallbackAsset: "PatternFallback", size: 58)
             VStack(alignment: .leading, spacing: 4) { Text(pattern.name).font(.headline); Text([pattern.designer, "\(pattern.totalInstructions) steps"].compactMap { $0 }.joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary) }
         }.padding(.vertical, 4)
+    }
+}
+
+struct ListCoverThumbnail: View {
+    let path: String?
+    let fallbackAsset: String
+    let size: CGFloat
+
+    var body: some View {
+        AuthenticatedCoverImage(path: path, fallbackAsset: fallbackAsset, showsLoadingIndicator: true)
+            .frame(width: size - 8, height: size - 8)
+            .clipped()
+            .clipShape(.rect(cornerRadius: 10))
+            .padding(4)
+            .frame(width: size, height: size)
+            .background(Color.cream, in: .rect(cornerRadius: 14))
     }
 }
 
@@ -312,15 +328,27 @@ struct AuthenticatedCoverImage: View {
     @EnvironmentObject private var auth: AuthManager
     let path: String?
     let fallbackAsset: String
+    var showsLoadingIndicator = false
     @State private var image: UIImage?
+    @State private var isLoading = false
     var body: some View {
-        Group {
+        ZStack {
             if let image { Image(uiImage: image).resizable().scaledToFill() }
             else { Image(fallbackAsset).resizable().scaledToFill() }
+            if isLoading && showsLoadingIndicator {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(.brandOrange)
+                    .padding(6)
+                    .background(.white.opacity(0.92), in: .circle)
+            }
         }
         .clipShape(.rect(cornerRadius: 14))
         .task(id: path) {
-            guard let path, let userID = auth.user?.id else { return }
+            image = nil
+            guard let path, let userID = auth.user?.id else { isLoading = false; return }
+            isLoading = true
+            defer { isLoading = false }
             let client = auth.client
             if let data = try? await AppDataCache.shared.imageData(for: userID, path: path, client: client), let loaded = UIImage(data: data) { image = loaded }
         }

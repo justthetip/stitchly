@@ -107,6 +107,24 @@ struct StitchlyTests {
             #expect(await cache.cachedPatterns(for: "maker")?.value.map(\.id) == [DemoData.pattern.id])
         }
     }
+
+    @Test func coverImagesPersistLocallyAndStayAccountScoped() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "StitchlyImageCacheTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let counter = CacheRequestCounter()
+        let client = APIClient(token: "test") { request in try await counter.assetResponse(for: request) }
+        let expected = Data("cached-cover".utf8)
+
+        let firstCache = AppDataCache(storageDirectory: directory)
+        #expect(try await firstCache.imageData(for: "maker-a", path: "/cover.png", client: client) == expected)
+
+        let reloadedCache = AppDataCache(storageDirectory: directory)
+        #expect(try await reloadedCache.imageData(for: "maker-a", path: "/cover.png", client: client) == expected)
+        #expect(await counter.requestCount == 1)
+
+        #expect(try await reloadedCache.imageData(for: "maker-b", path: "/cover.png", client: client) == expected)
+        #expect(await counter.requestCount == 2)
+    }
 }
 
 private actor CacheRequestCounter {
@@ -118,5 +136,11 @@ private actor CacheRequestCounter {
         let data = try JSONEncoder().encode(PatternListResponse(patterns: [DemoData.pattern]))
         let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
         return (data, response)
+    }
+
+    func assetResponse(for request: URLRequest) async throws -> (Data, URLResponse) {
+        requestCount += 1
+        let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "image/png"])!
+        return (Data("cached-cover".utf8), response)
     }
 }

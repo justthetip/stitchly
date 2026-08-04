@@ -152,6 +152,12 @@ actor AppDataCache {
     func imageData(for userID: String, path: String, client: APIClient) async throws -> Data {
         let key = assetKey(userID: userID, path: path)
         if let data = imageCache.object(forKey: key as NSString) { return data as Data }
+        let diskURL = imageURL(userID: userID, path: path)
+        if let data = try? Data(contentsOf: diskURL), !data.isEmpty {
+            imageCache.setObject(data as NSData, forKey: key as NSString, cost: data.count)
+            assetKeysByUser[userID, default: []].insert(key)
+            return data
+        }
         if let task = imageTasks[key] { return try await task.value }
         let task = Task<Data, Error> { try await client.imageData(path) }
         imageTasks[key] = task
@@ -160,6 +166,7 @@ actor AppDataCache {
             imageTasks[key] = nil
             imageCache.setObject(data as NSData, forKey: key as NSString, cost: data.count)
             assetKeysByUser[userID, default: []].insert(key)
+            persistImage(data, to: diskURL)
             return data
         } catch {
             imageTasks[key] = nil
@@ -228,6 +235,7 @@ actor AppDataCache {
             pdfCache.removeObject(forKey: key as NSString)
         }
         try? FileManager.default.removeItem(at: snapshotURL(for: userID))
+        try? FileManager.default.removeItem(at: imageDirectory(for: userID))
     }
 
     private func ensureLoaded(_ userID: String) {
@@ -256,8 +264,32 @@ actor AppDataCache {
     }
 
     private func snapshotURL(for userID: String) -> URL {
-        let digest = SHA256.hash(data: Data(userID.utf8)).prefix(12).map { String(format: "%02x", $0) }.joined()
+        let digest = digest(userID, byteCount: 12)
         return storageDirectory.appending(path: "account-\(digest).json")
+    }
+
+    private func imageDirectory(for userID: String) -> URL {
+        storageDirectory.appending(path: "images", directoryHint: .isDirectory)
+            .appending(path: digest(userID, byteCount: 12), directoryHint: .isDirectory)
+    }
+
+    private func imageURL(userID: String, path: String) -> URL {
+        imageDirectory(for: userID).appending(path: "\(digest(path)).image")
+    }
+
+    private func persistImage(_ data: Data, to url: URL) {
+        let directory = url.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        var excludedDirectory = directory
+        try? excludedDirectory.setResourceValues(values)
+        try? data.write(to: url, options: .atomic)
+        try? FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: url.path)
+    }
+
+    private func digest(_ value: String, byteCount: Int = 32) -> String {
+        SHA256.hash(data: Data(value.utf8)).prefix(byteCount).map { String(format: "%02x", $0) }.joined()
     }
 
     private func assetKey(userID: String, path: String) -> String { "\(userID):\(path)" }
