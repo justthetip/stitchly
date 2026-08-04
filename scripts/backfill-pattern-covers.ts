@@ -4,9 +4,9 @@ import { getDocumentProxy } from "unpdf";
 import { createPrivatePatternCover } from "../src/lib/pattern-cover.ts";
 
 const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("DATABASE_URL is not configured");
 
 async function main() {
+  if (!databaseUrl) throw new Error("DATABASE_URL is not configured");
   const sql = neon(databaseUrl);
   const patterns = await sql`
     select id, owner_id, blob_url
