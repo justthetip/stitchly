@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Check, ChevronLeft, ChevronRight, Eye, NotebookPen, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Eye, NotebookPen, Sparkles, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { AccountGateButton } from "@/components/account-gate";
 import { authClient } from "@/lib/auth-client";
 import { demoInstructions, demoPattern, demoProject, isDemoProject } from "@/lib/demo-data";
+import { loadProgress, saveProgress } from "@/lib/persistence";
 
 type Project = {
   id: string;
@@ -53,9 +54,10 @@ export default function ReaderPage() {
       const timer = setTimeout(() => {
         setProject(bundled);
         const bundledInstructions = demoInstructions(bundled.pattern_id);
+        const saved = loadProgress(bundled.id, bundled.current_instruction);
         setInstructions(bundledInstructions);
         setNotes([]);
-        setIndex(Math.max(0, bundledInstructions.findIndex((instruction) => instruction.position === bundled.current_instruction)));
+        setIndex(Math.max(0, bundledInstructions.findIndex((instruction) => instruction.position === saved.row)));
         setLoading(false);
       }, 0);
       return () => clearTimeout(timer);
@@ -90,6 +92,13 @@ export default function ReaderPage() {
   async function move(nextIndex: number) {
     if (!project || !instructions[nextIndex]) return;
     setIndex(nextIndex);
+    if (isDemoProject(project.id)) {
+      const nextPosition = instructions[nextIndex].position;
+      saveProgress(project.id, { row: nextPosition, notes: {} });
+      setProject((current) => current ? { ...current, current_instruction: nextPosition } : current);
+      setError("");
+      return;
+    }
     setSaving(true);
     try {
       const response = await fetch(`/api/projects/${project.id}`, {
@@ -189,10 +198,19 @@ export default function ReaderPage() {
         </div>
         <span className="flex size-9 items-center justify-center rounded-full bg-secondary text-[10px] font-black">{pct}%</span>
       </header>
+      {isDemoProject(project.id) && (
+        <div className="mx-3 mt-3 flex items-center gap-3 rounded-2xl border border-[#c23357]/40 bg-[#c23357]/10 px-4 py-3 text-[#082e59]">
+          <Sparkles className="size-5 shrink-0 text-[#c23357]" />
+          <div>
+            <p className="font-heading text-xs font-black tracking-wide">DEMO PROJECT</p>
+            <p className="text-[11px] font-semibold">Try every step · saved only on this device</p>
+          </div>
+        </div>
+      )}
       <div className="px-5 pt-3">
         <Progress value={pct} className="h-1" />
         <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground">
-          <span>Start</span><span>{isDemoProject(project.id) ? "Demo · sign in to save" : saving ? "Syncing…" : "Synced"}</span><span>Done</span>
+          <span>Start</span><span>{isDemoProject(project.id) ? "Saved on this device" : saving ? "Syncing…" : "Synced"}</span><span>Done</span>
         </div>
       </div>
       {error && <p className="mx-5 mt-3 rounded-xl bg-red-50 p-2 text-center text-xs font-bold text-red-700">{error}</p>}
@@ -227,8 +245,8 @@ export default function ReaderPage() {
       {next && <Peek instruction={next} prefix="Coming up" />}
       <div className="sticky bottom-0 border-t bg-background/95 px-3 py-3 backdrop-blur">
         <div className="flex gap-2">
-          {session.data?.user ? <button onClick={() => move(index - 1)} disabled={!previous || saving} className={cn("flex w-14 items-center justify-center rounded-xl border bg-card", (!previous || saving) && "opacity-40")} aria-label="Previous instruction"><ChevronLeft className="size-5" /></button> : <AccountGateButton title="Create an account to save your place" message="Sign in to keep this step synced and resume it on any device." next={`/projects/${project.id}/reader`} className={cn("flex w-14 items-center justify-center rounded-xl border bg-card", !previous && "pointer-events-none opacity-40")}><ChevronLeft className="size-5" /><span className="sr-only">Previous instruction</span></AccountGateButton>}
-          {session.data?.user ? (
+          <button onClick={() => move(index - 1)} disabled={!previous || saving} className={cn("flex w-14 items-center justify-center rounded-xl border bg-card", (!previous || saving) && "opacity-40")} aria-label="Previous instruction"><ChevronLeft className="size-5" /></button>
+          {next || session.data?.user ? (
             <Button onClick={() => next ? move(index + 1) : finish()} disabled={saving} size="lg" className="flex-1">
               <Check className="mr-2 size-4" strokeWidth={3} />{next ? instruction.optional ? "Skip or complete — continue" : instruction.instruction_kind === "choice" ? "Chosen — continue" : `Done — next ${next.instruction_kind}` : "Finish project"}{next && <ChevronRight className="ml-1 size-4" />}
             </Button>
@@ -238,7 +256,7 @@ export default function ReaderPage() {
             </AccountGateButton>
           )}
         </div>
-        <p className="mt-2 text-center text-[10px] text-muted-foreground">{isDemoProject(project.id) ? "Explore freely · create an account when you want to save" : "Progress saves securely to your account"}</p>
+        <p className="mt-2 text-center text-[10px] text-muted-foreground">{isDemoProject(project.id) ? "Progress stays on this device · sign in when you want cloud sync" : "Progress saves securely to your account"}</p>
       </div>
       <Sheet open={noteOpen} onOpenChange={setNoteOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl">

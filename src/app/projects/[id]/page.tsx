@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowRight, NotebookPen, Play } from "lucide-react";
+import { ArrowRight, NotebookPen, Play, Sparkles } from "lucide-react";
 import { ScreenHeader } from "@/components/screen-header";
 import { PatternCover } from "@/components/pattern-cover";
 import { Progress } from "@/components/ui/progress";
@@ -113,6 +113,15 @@ export default function ProjectDetailPage() {
           </Link>
           {isDemoProject(project.id) ? <a href={demoPattern(project.pattern_id)?.pdf_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-extrabold text-primary">View original PDF<ArrowRight className="size-3" /></a> : <a href={`/api/patterns/${project.pattern_id}/original`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-extrabold text-primary">View original PDF<ArrowRight className="size-3" /></a>}
         </div>
+        {isDemoProject(project.id) && (
+          <div className="mt-4 flex gap-3 rounded-2xl border border-[#c23357]/40 bg-[#c23357]/10 p-4 text-[#082e59]">
+            <Sparkles className="mt-0.5 size-5 shrink-0 text-[#c23357]" />
+            <div>
+              <p className="font-heading text-sm font-black">You’re exploring a demo project</p>
+              <p className="mt-1 text-xs font-semibold leading-relaxed">Tap through every step to experience the reader. Your place is saved only on this device.</p>
+            </div>
+          </div>
+        )}
         <h1 className="font-heading mt-1 text-3xl font-black">
           {project.name}
         </h1>
@@ -129,7 +138,7 @@ export default function ProjectDetailPage() {
               Step {project.current_instruction} of {project.total_instructions}
             </span>
             <span>
-              {isDemoProject(project.id) ? "Demo progress · sign in to save" : <>Synced {new Date(project.last_worked_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</>}
+              {isDemoProject(project.id) ? "Saved on this device" : <>Synced {new Date(project.last_worked_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</>}
             </span>
           </div>
           <Link
@@ -137,7 +146,7 @@ export default function ProjectDetailPage() {
             className="mt-5 flex w-full items-center justify-center rounded-2xl bg-primary px-5 py-4 font-heading text-sm font-extrabold text-white"
           >
             <Play className="mr-2 size-4" />
-            Continue from step {project.current_instruction}
+            {isDemoProject(project.id) ? `Enter demo at step ${project.current_instruction}` : `Continue from step ${project.current_instruction}`}
           </Link>
         </div>
         <section className="mt-7">

@@ -1,5 +1,6 @@
 import catalog from "./demo-catalog.json";
 import type { PatternInstructionRecord } from "@/lib/pattern-instructions";
+import { loadProgress } from "@/lib/persistence";
 
 export type DemoPattern = {
   id: string;
@@ -93,7 +94,15 @@ export const demoProjects: DemoProject[] = [{
 }];
 
 export function demoPattern(id: string) { return demoPatterns.find((pattern) => pattern.id === id); }
-export function demoProject(id: string) { return demoProjects.find((project) => project.id === id); }
+export function demoProject(id: string) {
+  const project = demoProjects.find((candidate) => candidate.id === id);
+  if (!project) return undefined;
+  const progress = loadProgress(project.id, project.current_instruction);
+  const currentInstruction = progress.row > 0 && progress.row <= project.total_instructions
+    ? progress.row
+    : project.current_instruction;
+  return { ...project, current_instruction: currentInstruction };
+}
 export function demoInstructions(id: string) { return instructionsByPattern[id] ?? []; }
 export function isDemoPattern(id: string) { return Boolean(demoPattern(id)); }
 export function isDemoProject(id: string) { return Boolean(demoProject(id)); }

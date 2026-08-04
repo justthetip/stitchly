@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowRight, BookOpen, FileUp, Play, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen } from "lucide-react";
 import { CraftArt } from "@/components/craft-art";
 import { PatternCover } from "@/components/pattern-cover";
 import { Progress } from "@/components/ui/progress";
 import { authClient } from "@/lib/auth-client";
-import { demoProjects } from "@/lib/demo-data";
+import { demoProject, demoProjects, isDemoProject } from "@/lib/demo-data";
 type Project = {
   id: string;
   name: string;
@@ -26,7 +26,7 @@ export default function HomePage() {
     if (session.isPending) return;
     if (!session.data?.user) {
       const timer = setTimeout(() => {
-        setProjects(demoProjects);
+        setProjects(demoProjects.map((project) => demoProject(project.id) ?? project));
         setLoaded(true);
       }, 0);
       return () => clearTimeout(timer);
@@ -50,6 +50,7 @@ export default function HomePage() {
     <div className="pb-10">
       <header className="relative overflow-hidden bg-[#f5a623] px-5 pb-9 pt-8 md:px-10">
         <div className="stitch-pattern absolute inset-0 opacity-35" />
+        <CraftArt art="basket" className="absolute -bottom-12 right-12 size-40 opacity-55" />
         <div className="relative flex items-start justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[.18em] text-[#17324d]/65">
@@ -60,6 +61,9 @@ export default function HomePage() {
             <h1 className="font-heading mt-1 text-3xl font-black">
               What shall we make?
             </h1>
+            <p className="mt-2 max-w-xs text-xs font-extrabold text-[#17324d]/75">
+              Quick PDF import · Consistent steps · Keep your place
+            </p>
           </div>
           <Link
             href="/account"
@@ -79,34 +83,6 @@ export default function HomePage() {
         ) : (
           <EmptyHome signedIn={Boolean(session.data?.user)} />
         )}
-        <section className="mt-9">
-          <p className="text-xs font-extrabold uppercase tracking-[.16em] text-primary">
-            How Stitchly works
-          </p>
-          <h2 className="font-heading mt-1 text-2xl font-black">
-            From PDF to one clear step
-          </h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <Step
-              icon={FileUp}
-              number="01"
-              title="Add your pattern"
-              body="Upload a private PDF from your phone or computer."
-            />
-            <Step
-              icon={Sparkles}
-              number="02"
-              title="Check the structure"
-              body="Review the sections, rounds, rows and finishing steps."
-            />
-            <Step
-              icon={Play}
-              number="03"
-              title="Start making"
-              body="Progress and notes sync to your account."
-            />
-          </div>
-        </section>
       </div>
     </div>
   );
@@ -129,9 +105,11 @@ function ContinueProject({ project }: { project: Project }) {
         />
       </div>
       <div className="flex flex-col justify-center p-6">
-        <p className="text-xs font-extrabold uppercase tracking-[.15em] text-primary">
-          Continue making
-        </p>
+        {isDemoProject(project.id) ? (
+          <p className="w-fit rounded-full bg-[#c23357] px-3 py-1 text-[10px] font-black tracking-wide text-white">DEMO PROJECT</p>
+        ) : (
+          <p className="text-xs font-extrabold uppercase tracking-[.15em] text-primary">Continue making</p>
+        )}
         <h2 className="font-heading mt-1 text-2xl font-black">
           {project.name}
         </h2>
@@ -139,6 +117,7 @@ function ContinueProject({ project }: { project: Project }) {
           Step {project.current_instruction} of {project.total_instructions} ·{" "}
           {project.pattern_name}
         </p>
+        {isDemoProject(project.id) && <p className="mt-2 text-xs font-semibold text-[#17324d]">Explore the full reader. Your progress stays on this device.</p>}
         <div className="mt-4 flex items-center gap-3">
           <Progress value={pct} className="h-2" />
           <span className="text-xs font-extrabold">{pct}%</span>
@@ -147,7 +126,7 @@ function ContinueProject({ project }: { project: Project }) {
           href={`/projects/${project.id}/reader`}
           className="mt-5 inline-flex items-center gap-2 font-heading text-sm font-extrabold text-primary"
         >
-          Open reader <ArrowRight className="size-4" />
+          {isDemoProject(project.id) ? "Enter interactive demo" : "Open reader"} <ArrowRight className="size-4" />
         </Link>
       </div>
     </section>
@@ -182,33 +161,5 @@ function EmptyHome({ signedIn }: { signedIn: boolean }) {
         </Link>
       </div>
     </section>
-  );
-}
-function Step({
-  icon: Icon,
-  number,
-  title,
-  body,
-}: {
-  icon: typeof FileUp;
-  number: string;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="stitch-card p-5">
-      <div className="flex items-center justify-between">
-        <span className="flex size-10 items-center justify-center rounded-2xl bg-secondary">
-          <Icon className="size-5" />
-        </span>
-        <span className="font-heading text-sm font-black text-primary/50">
-          {number}
-        </span>
-      </div>
-      <h3 className="font-heading mt-4 font-extrabold">{title}</h3>
-      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-        {body}
-      </p>
-    </div>
   );
 }

@@ -8,34 +8,39 @@ import XCTest
         app.launchArguments = ["-demo", "-projectsDemo", "-resetDemoReaderProgressForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["DEMO PROJECT"].exists)
         XCTAssertTrue(app.staticTexts["My Fruity Friends"].exists)
         app.staticTexts["My Fruity Friends"].tap()
         XCTAssertTrue(app.navigationBars["Project overview"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Used the coral marker at the side seam."].exists)
+        XCTAssertTrue(app.staticTexts["You’re exploring a demo project"].exists)
         app.buttons["continue-project"].tap()
-        XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Row 11"].waitForExistence(timeout: 3))
         let sectionSwitcher = app.buttons["reader-section-switcher"]
         XCTAssertTrue(sectionSwitcher.isHittable)
-        XCTAssertTrue(sectionSwitcher.label.contains("Back panel"))
+        XCTAssertTrue(sectionSwitcher.label.contains("APPLE"))
         sectionSwitcher.tap()
         XCTAssertTrue(app.navigationBars["Pattern sections"].waitForExistence(timeout: 3))
         app.buttons["Close sections"].tap()
         XCTAssertTrue(app.buttons["reader-actions"].exists)
         XCTAssertTrue(app.buttons["Next"].isHittable)
         app.buttons["Next"].tap()
-        XCTAssertTrue(app.staticTexts["Row 2"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Row 35"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["reader-exit"].isHittable)
         app.buttons["reader-exit"].tap()
         XCTAssertTrue(app.navigationBars["Project overview"].waitForExistence(timeout: 3))
         app.buttons["continue-project"].tap()
-        XCTAssertTrue(app.staticTexts["Row 2"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Row 35"].waitForExistence(timeout: 3))
         app.buttons["reader-actions"].tap()
         XCTAssertTrue(app.buttons["reader-original-pdf"].exists)
         app.buttons["reader-sections"].tap()
         XCTAssertTrue(app.navigationBars["Pattern sections"].waitForExistence(timeout: 3))
         try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
-        app.buttons.matching(NSPredicate(format: "label CONTAINS 'Sleeves'")).firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["Cuff"].waitForExistence(timeout: 3))
+        let finishingSection = app.buttons.matching(NSPredicate(format: "label CONTAINS 'TO MAKE UP'")).firstMatch
+        for _ in 0..<12 where !finishingSection.isHittable { app.swipeUp() }
+        XCTAssertTrue(finishingSection.isHittable)
+        finishingSection.tap()
+        XCTAssertTrue(app.staticTexts["Step 80"].waitForExistence(timeout: 3))
+        app.buttons["Next"].tap()
         XCTAssertTrue(app.buttons["Finish project"].isHittable)
         app.buttons["Finish project"].tap()
         XCTAssertTrue(app.staticTexts["You finished My Fruity Friends!"].waitForExistence(timeout: 3))
@@ -45,7 +50,7 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Completed"].exists)
     }
 
-    func testLibraryJourneyAtLargestDynamicType() {
+    func testLibraryJourneyAtLargestDynamicType() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-demo", "-libraryDemo", "-skipFirstLaunchSplashForUITests", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
@@ -54,10 +59,8 @@ import XCTest
         XCTAssertTrue(app.buttons["Import"].isHittable)
         app.staticTexts["Fruity Friends"].tap()
         XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
-        for _ in 0..<2 where !app.staticTexts["Back panel"].exists { app.swipeUp() }
-        XCTAssertTrue(app.staticTexts["Back panel"].waitForExistence(timeout: 3))
-        for _ in 0..<4 { app.swipeUp() }
-        XCTAssertTrue(app.staticTexts["Left front"].waitForExistence(timeout: 3))
+        for _ in 0..<2 where !app.staticTexts["APPLE"].exists { app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["APPLE"].waitForExistence(timeout: 3))
     }
 
     func testNativeAuthenticationScreenIsAccessible() throws {
@@ -68,14 +71,20 @@ import XCTest
         let emailChoice = app.buttons["continue-with-email"]
         XCTAssertTrue(emailChoice.isHittable)
         emailChoice.tap()
+        let name = app.textFields["Your name"]
         let email = app.textFields["Email address"]
         let password = app.secureTextFields["Password"]
+        XCTAssertTrue(name.waitForExistence(timeout: 3))
         XCTAssertTrue(email.waitForExistence(timeout: 3))
         XCTAssertTrue(password.exists)
+        XCTAssertTrue(name.isHittable)
         XCTAssertTrue(email.isHittable)
         XCTAssertTrue(password.isHittable)
         XCTAssertGreaterThanOrEqual(app.buttons["toggle-password-visibility"].frame.height, 44)
-        XCTAssertTrue(app.buttons["Sign in"].exists)
+        XCTAssertTrue(app.buttons["Create account"].exists)
+        let back = app.buttons["back-to-sign-in-options"]
+        XCTAssertTrue(back.isHittable)
+        XCTAssertGreaterThanOrEqual(back.frame.height, 44)
         try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
     }
 
@@ -86,7 +95,7 @@ import XCTest
         let submit = app.buttons["auth-submit-button"]
         XCTAssertTrue(submit.waitForExistence(timeout: 5))
         XCTAssertGreaterThanOrEqual(submit.frame.height, 44)
-        XCTAssertTrue(submit.label.contains("Signing you in"))
+        XCTAssertTrue(submit.label.contains("Creating your account"))
     }
 
     func testAuthenticationFieldsSupportEdgeTapsKeyboardProgressionAndModeSwitching() {
@@ -97,7 +106,15 @@ import XCTest
         let emailChoice = app.buttons["continue-with-email"]
         XCTAssertTrue(emailChoice.waitForExistence(timeout: 5))
         emailChoice.tap()
+        let name = app.textFields["Your name"]
         let email = app.textFields["Email address"]
+        XCTAssertTrue(name.waitForExistence(timeout: 3))
+        XCTAssertTrue(email.waitForExistence(timeout: 3))
+        let modeSwitch = app.buttons["Already have an account? Sign in"]
+        XCTAssertTrue(modeSwitch.isHittable)
+        modeSwitch.tap()
+        XCTAssertTrue(app.buttons["Sign in"].waitForExistence(timeout: 3))
+        XCTAssertFalse(name.exists)
         XCTAssertTrue(email.waitForExistence(timeout: 3))
         app.buttons["Sign in"].tap()
         XCTAssertTrue(app.staticTexts["auth-validation-message"].exists)
@@ -115,15 +132,6 @@ import XCTest
 
         let keyboardDone = app.buttons["auth-keyboard-done"]
         if keyboardDone.waitForExistence(timeout: 1) { keyboardDone.tap() }
-        let modeSwitch = app.buttons["New here? Create an account"]
-        let authScrollView = app.scrollViews["auth-scroll-view"]
-        XCTAssertTrue(authScrollView.exists)
-        for _ in 0..<6 where !modeSwitch.isHittable { authScrollView.swipeDown() }
-        XCTAssertTrue(modeSwitch.isHittable)
-        modeSwitch.tap()
-        let name = app.textFields["Your name"]
-        XCTAssertTrue(name.waitForExistence(timeout: 3))
-        XCTAssertTrue(name.isHittable)
         XCTAssertEqual(email.value as? String, "maker@example.com")
     }
 
@@ -183,11 +191,30 @@ import XCTest
         XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
     }
 
+    func testGuestReaderProgressesAndPersistsLocallyWithoutAuthentication() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-readerDemo", "-resetDemoReaderProgressForUITests", "-skipFirstLaunchSplashForUITests"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Row 11"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Demo project"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["guest-local-progress"].exists)
+        app.buttons["Next"].tap()
+        XCTAssertTrue(app.staticTexts["Row 35"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["Continue with Apple"].exists)
+
+        app.terminate()
+        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-readerDemo", "-skipFirstLaunchSplashForUITests"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Row 35"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["guest-local-progress"].exists)
+    }
+
     func testReaderPassesAccessibilityAudit() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-demo", "-readerDemo", "-resetDemoReaderProgressForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Row 11"].waitForExistence(timeout: 5))
         try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
     }
 
@@ -199,7 +226,7 @@ import XCTest
         XCTAssertTrue(loading.waitForExistence(timeout: 3))
         XCTAssertTrue(app.descendants(matching: .any)["branded-loading-state"].exists)
         XCTAssertTrue(loading.label.contains("Loading pattern sections, your current step, and saved notes."))
-        XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["Row 11"].waitForExistence(timeout: 8))
     }
 
     func testReaderGroupsRepeatedRowsAndShowsTheWorkedRepeatCount() throws {
@@ -282,10 +309,12 @@ import XCTest
         app.launchArguments = ["-demo", "-resetDemoReaderProgressForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["home-feature-strip"].exists)
+        XCTAssertTrue(app.staticTexts["DEMO PROJECT"].exists)
         XCTAssertTrue(app.staticTexts["My Fruity Friends"].exists)
-        XCTAssertTrue(app.staticTexts["Row 1"].exists)
+        XCTAssertTrue(app.staticTexts["Row 11"].exists)
         app.buttons["resume-current-project"].tap()
-        XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Row 11"].waitForExistence(timeout: 5))
     }
 
     func testHomeExplainsLoadingCurrentProject() {
@@ -302,7 +331,6 @@ import XCTest
         app.launchArguments = ["-demo", "-emptyProjectsDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         XCTAssertTrue(app.staticTexts["Choose what to make next"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.descendants(matching: .any)["getting-started-guide"].exists)
         app.buttons["empty-state-primary-action"].tap()
         XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 3))
     }
@@ -347,7 +375,9 @@ import XCTest
         app.buttons["Delete Fruity Friends"].tap()
         XCTAssertTrue(app.buttons["Delete Fruity Friends"].waitForExistence(timeout: 3))
         app.buttons["Delete Fruity Friends"].tap()
-        XCTAssertTrue(app.staticTexts["Try your first pattern"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Fruity Friends"].waitForNonExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Mini Whale"].exists)
+        XCTAssertTrue(app.staticTexts["The Perfect Granny Square"].exists)
     }
 
     func testImportedPatternCanBeReviewedEditedAndSaved() {

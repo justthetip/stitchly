@@ -13,8 +13,10 @@ import StoreKit
         if userID == nil || client.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
-            activeProject = ProcessInfo.processInfo.arguments.contains("-emptyProjectsDemo") ? nil : DemoData.project
-            sourceLabel = activeProject == nil ? nil : DemoData.instructions.first(where: { $0.position == DemoData.project.currentInstruction })?.sourceLabel
+            activeProject = ProcessInfo.processInfo.arguments.contains("-emptyProjectsDemo") ? nil : DemoData.projectWithLocalProgress
+            sourceLabel = activeProject.flatMap { project in
+                DemoData.instructions.first(where: { $0.position == project.currentInstruction })?.sourceLabel
+            }
             return
         }
         guard let userID else { return }
@@ -42,7 +44,6 @@ import StoreKit
 struct HomeView: View {
     @EnvironmentObject private var auth: AuthManager
     @StateObject private var store = HomeStore()
-    @State private var showHowItWorks = false
     let showProjects: () -> Void
 
     var body: some View {
@@ -53,35 +54,41 @@ struct HomeView: View {
                 } else if let project = store.activeProject {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 22) {
-                            Text("Ready to keep making?").font(.largeTitle.bold()).foregroundStyle(Color.ink)
+                            HomeFeatureStrip()
                             VStack(alignment: .leading, spacing: 14) {
                                 HStack(alignment: .top, spacing: 14) {
                                     ListCoverThumbnail(path: project.coverUrl, fallbackAsset: "ProjectFallback", size: 88)
                                     VStack(alignment: .leading, spacing: 5) {
-                                        Label("Current project", systemImage: "sparkles").font(.headline).foregroundStyle(Color.brandPink)
+                                        if (auth.isGuest || auth.token == "demo") && project.id == DemoData.project.id {
+                                            Label("DEMO PROJECT", systemImage: "sparkles")
+                                                .font(.caption.weight(.bold))
+                                                .foregroundStyle(Color.white)
+                                                .padding(.horizontal, 9)
+                                                .padding(.vertical, 5)
+                                                .background(Color.brandPink, in: .capsule)
+                                        } else {
+                                            Label("Current project", systemImage: "sparkles").font(.headline).foregroundStyle(Color.brandPink)
+                                        }
                                         Text(project.name).font(.title2.bold()).foregroundStyle(Color.ink)
                                         Text(project.patternName ?? "Pattern").font(.headline).foregroundStyle(.secondary)
                                     }
+                                }
+                                if (auth.isGuest || auth.token == "demo") && project.id == DemoData.project.id {
+                                    Text("Explore the full Stitchly reader. Your progress stays on this device.")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color.ink)
                                 }
                                 Text(store.sourceLabel ?? "Step \(project.currentInstruction)").font(.title3.weight(.semibold)).foregroundStyle(Color.ink)
                                 ProgressView(value: Double(project.currentInstruction), total: Double(max(project.totalInstructions ?? 1, 1))).tint(.brandOrange)
                                 Text("Step \(project.currentInstruction) of \(project.totalInstructions ?? 0)").font(.subheadline).foregroundStyle(.secondary)
                                 NavigationLink(value: project) {
-                                    Label("Resume project", systemImage: "play.fill").frame(maxWidth: .infinity)
+                                    Label((auth.isGuest || auth.token == "demo") && project.id == DemoData.project.id ? "Enter interactive demo" : "Resume project", systemImage: "play.fill").frame(maxWidth: .infinity)
                                 }
                                 .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
                                 .accessibilityIdentifier("resume-current-project")
                             }
                             .padding(22)
                             .background(Color.cream, in: .rect(cornerRadius: 24))
-                            DisclosureGroup("How Stitchly works", isExpanded: $showHowItWorks) {
-                                GettingStartedGuide()
-                                    .padding(.top, 12)
-                            }
-                            .font(.headline)
-                            .foregroundStyle(Color.ink)
-                            .padding(18)
-                            .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 20))
                         }
                         .padding()
                     }
@@ -90,7 +97,6 @@ struct HomeView: View {
                         VStack(spacing: 22) {
                             ActionableEmptyState(icon: "square.stack.3d.up", title: "Choose what to make next", message: "Start a project from a pattern in your library, then resume it here anytime.", actionTitle: "View projects", actionIcon: "square.stack.3d.up", isDisabled: store.isLoading, action: showProjects)
                                 .frame(minHeight: 330)
-                            GettingStartedGuide()
                         }
                         .padding()
                     }
@@ -107,29 +113,43 @@ struct HomeView: View {
     }
 }
 
-private struct GettingStartedGuide: View {
-    private let steps = [
-        ("1", "Add a private PDF", "Choose a knitting or crochet pattern from Files.", "doc.badge.plus"),
-        ("2", "Check the structure", "Review its sections, rows, rounds, setup, and finishing.", "checklist"),
-        ("3", "Start making", "Follow one clear step while progress and notes stay synced.", "play.fill"),
+private struct HomeFeatureStrip: View {
+    private let features = [
+        ("OnboardingBringPatterns", "Quick PDF import"),
+        ("OnboardingClearSteps", "Consistent steps"),
+        ("OnboardingKeepPlace", "Keep your place"),
     ]
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("From PDF to one clear step").font(.title2.bold()).foregroundStyle(Color.ink)
-            ForEach(steps, id: \.0) { step in
-                HStack(alignment: .top, spacing: 14) {
-                    Image(systemName: step.3).font(.headline).foregroundStyle(Color.brandPink).frame(width: 30, height: 30).background(Color.brandPink.opacity(0.14), in: .circle)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(step.1).font(.headline).foregroundStyle(Color.ink)
-                        Text(step.2).font(.subheadline).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Turn a pattern PDF into clear, trackable steps")
+                .font(.title2.bold())
+                .foregroundStyle(Color.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                ForEach(features, id: \.0) { feature in
+                    VStack(spacing: 7) {
+                        Image(feature.0)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 70)
+                            .clipped()
+                            .clipShape(.rect(cornerRadius: 14))
+                            .accessibilityHidden(true)
+                        Text(feature.1)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Color.ink)
+                            .multilineTextAlignment(.center)
                     }
+                    .frame(maxWidth: .infinity, alignment: .top)
                 }
-                .accessibilityElement(children: .combine)
             }
         }
-        .padding(20)
-        .background(Color.cream, in: .rect(cornerRadius: 22))
-        .accessibilityIdentifier("getting-started-guide")
+        .padding(16)
+        .background(Color.brandBlue.opacity(0.18), in: .rect(cornerRadius: 22))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("home-feature-strip")
     }
 }
 
@@ -146,7 +166,7 @@ private struct GettingStartedGuide: View {
         if userID == nil || client.token == "demo" {
             loading = true; defer { loading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
-            projects = ProcessInfo.processInfo.arguments.contains("-emptyProjectsDemo") ? [] : [DemoData.project]
+            projects = ProcessInfo.processInfo.arguments.contains("-emptyProjectsDemo") ? [] : [DemoData.projectWithLocalProgress]
             return
         }
         guard let userID else { return }
@@ -234,7 +254,33 @@ struct ProjectsView: View {
 struct ProjectRow: View {
     let project: Project
     var progress: Double { Double(project.currentInstruction) / Double(max(project.totalInstructions ?? 1, 1)) }
-    var body: some View { HStack(spacing: 12) { ListCoverThumbnail(path: project.coverUrl, fallbackAsset: "ProjectFallback", size: 64); VStack(alignment: .leading, spacing: 10) { HStack { VStack(alignment: .leading, spacing: 3) { Text(project.name).font(.headline); Text(project.patternName ?? "Pattern").font(.subheadline).foregroundStyle(.secondary) }; Spacer(); if project.status == "completed" { Label("Completed", systemImage: "checkmark.seal.fill").font(.caption.weight(.semibold)).foregroundStyle(Color.ink) } else if let craft = project.craft { CraftBadge(craft: craft) } }; ProgressView(value: progress).tint(project.status == "completed" ? .ink : .brandOrange); Text(project.status == "completed" ? "Finished project" : "Step \(project.currentInstruction) of \(project.totalInstructions ?? 0)").font(.caption).foregroundStyle(.secondary) } }.padding(.vertical, 6) }
+    var body: some View {
+        HStack(spacing: 12) {
+            ListCoverThumbnail(path: project.coverUrl, fallbackAsset: "ProjectFallback", size: 64)
+            VStack(alignment: .leading, spacing: 8) {
+                if project.id == DemoData.project.id {
+                    Label("DEMO PROJECT", systemImage: "sparkles")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.brandPink, in: .capsule)
+                }
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(project.name).font(.headline)
+                        Text(project.patternName ?? "Pattern").font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if project.status == "completed" { Label("Completed", systemImage: "checkmark.seal.fill").font(.caption.weight(.semibold)).foregroundStyle(Color.ink) }
+                    else if let craft = project.craft { CraftBadge(craft: craft) }
+                }
+                ProgressView(value: progress).tint(project.status == "completed" ? .ink : .brandOrange)
+                Text(project.status == "completed" ? "Finished project" : "Step \(project.currentInstruction) of \(project.totalInstructions ?? 0)").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 6)
+    }
 }
 
 struct ProjectOverviewView: View {
@@ -254,6 +300,7 @@ struct ProjectOverviewView: View {
     }
 
     private var currentLabel: String { detail?.instructions.first(where: { $0.position == project.currentInstruction })?.sourceLabel ?? "Step \(project.currentInstruction)" }
+    private var isGuestDemo: Bool { (auth.isGuest || auth.token == "demo") && project.id == DemoData.project.id }
     var body: some View {
         List {
             Section {
@@ -263,6 +310,7 @@ struct ProjectOverviewView: View {
                         .frame(minHeight: 190, maxHeight: 190)
                         .clipped()
                         .clipShape(.rect(cornerRadius: 14))
+                    if isGuestDemo { DemoProjectCallout() }
                     HStack { CraftBadge(craft: project.craft ?? "pattern"); Spacer(); if isCompleted { Label("Completed", systemImage: "checkmark.seal.fill").foregroundStyle(Color.ink) } }
                     Text(project.name).font(.largeTitle.bold()).fixedSize(horizontal: false, vertical: true)
                     Text(project.patternName ?? "Pattern").font(.headline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -277,7 +325,7 @@ struct ProjectOverviewView: View {
                         isCompleted = true
                         onUpdated()
                     }
-                } label: { Label(isCompleted ? "Review instructions" : "Continue project", systemImage: "play.fill") }
+                } label: { Label(isGuestDemo ? "Enter interactive demo" : (isCompleted ? "Review instructions" : "Continue project"), systemImage: "play.fill") }
                     .accessibilityIdentifier("continue-project")
                 Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext") }
                     .accessibilityIdentifier("project-original-pdf")
@@ -366,12 +414,19 @@ struct ReaderView: View {
     var currentStep: ReaderStep? { steps.indices.contains(currentStepIndex) ? steps[currentStepIndex] : nil }
     var current: Instruction? { currentStep?.instruction }
     var isAtLastStep: Bool { !steps.isEmpty && currentStepIndex == steps.count - 1 }
+    private var isGuestDemo: Bool { (auth.isGuest || auth.token == "demo") && project.id == DemoData.project.id }
     var body: some View {
         ZStack {
             LinearGradient(colors: [.cream.opacity(0.65), .white], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             VStack(spacing: 0) {
                 readerHeader.padding()
                 ProgressView(value: Double(currentStepIndex + 1), total: Double(max(steps.count, 1))).tint(.brandOrange).padding(.horizontal).accessibilityHidden(true)
+                if isGuestDemo {
+                    DemoProjectCallout(compact: true)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .accessibilityIdentifier("guest-local-progress")
+                }
                 if isLoading {
                     LoadingStateView(title: "Opening your project", message: "Loading pattern sections, your current step, and saved notes.")
                 } else { ScrollView {
@@ -403,7 +458,7 @@ struct ReaderView: View {
                                 .background(Color.cream, in: .rect(cornerRadius: 16))
                         }
                     }.frame(maxWidth: .infinity).padding(28)
-                }.defaultScrollAnchor(.center) }
+                }.defaultScrollAnchor(isGuestDemo ? .top : .center) }
                 readerControls.padding()
             }
         }.navigationTitle(project.name).navigationBarTitleDisplayMode(.inline).navigationBarBackButtonHidden(true).toolbar {
@@ -430,7 +485,7 @@ struct ReaderView: View {
                 .accessibilityIdentifier("reader-actions")
             }
         }.toolbar(.hidden, for: .tabBar)
-            .sheet(isPresented: $showSections) { sectionNavigator }
+            .fullScreenCover(isPresented: $showSections) { sectionNavigator }
             .sheet(isPresented: $showOriginal) { OriginalPDFView(patternID: project.patternId, title: project.patternName ?? "Original pattern") }
             .sheet(isPresented: $showCompletion) { completionView }
             .sheet(isPresented: $showNotes) { NavigationStack { Form { TextEditor(text: $note).frame(minHeight: 160); if isSavingNote { Section { LoadingBanner(message: "Saving this note to step \(position)…").frame(maxWidth: .infinity) } } }.navigationTitle("Step note").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showNotes = false }.disabled(isSavingNote) }; ToolbarItem(placement: .confirmationAction) { Button { Task { await saveNote() } } label: { if isSavingNote { ProgressView().accessibilityLabel("Saving note") } else { Text("Save") } }.disabled(isSavingNote || note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) } } } }
@@ -589,7 +644,7 @@ struct ReaderView: View {
             if ProcessInfo.processInfo.arguments.contains("-readerRepeatDemo") { instructions = DemoData.repeatInstructions; position = DemoData.repeatProject.currentInstruction; return }
             instructions = DemoData.instructions(for: project.patternId)
             let savedPosition = UserDefaults.standard.integer(forKey: "demoReaderPosition")
-            position = savedPosition > 0 ? savedPosition : project.currentInstruction
+            position = instructions.contains(where: { $0.position == savedPosition }) ? savedPosition : project.currentInstruction
             return
         }
         guard let userID = auth.user?.id else { return }
@@ -603,7 +658,7 @@ struct ReaderView: View {
     }
     private func persistProgress() async {
         guard !auth.isGuest else {
-            auth.requireAuthentication(title: "Create an account to save your place", message: "Sign in to keep this step synced and resume it on any device.")
+            UserDefaults.standard.set(position, forKey: "demoReaderPosition")
             return
         }
         if auth.token == "demo" { UserDefaults.standard.set(position, forKey: "demoReaderPosition"); return }
@@ -696,6 +751,39 @@ struct ReaderView: View {
         }
         .presentationDetents([.medium, .large])
         .interactiveDismissDisabled()
+    }
+}
+
+private struct DemoProjectCallout: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    var compact = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "sparkles")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(Color.brandPink)
+                .frame(width: 28, height: 28)
+                .background(Color.white, in: .circle)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(compact ? "Demo project" : "You’re exploring a demo project")
+                    .font((compact ? Font.caption : .headline).weight(.bold))
+                    .foregroundStyle(Color.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !compact || !dynamicTypeSize.isAccessibilitySize {
+                    Text(compact ? "Try every step · saved only on this device" : "Tap through every step to experience the reader. Your place is saved only on this device.")
+                        .font(.caption)
+                        .foregroundStyle(Color.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(compact ? 10 : 14)
+        .background(Color.ink, in: .rect(cornerRadius: 14))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(compact ? "Demo project. Try every step. Progress is saved only on this device." : "You’re exploring a demo project. Tap through every step to experience the reader. Your place is saved only on this device.")
     }
 }
 

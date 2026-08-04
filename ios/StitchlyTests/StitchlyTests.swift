@@ -8,9 +8,13 @@ struct StitchlyTests {
     @Test func firstLaunchSplashHasThreeSecondMinimum() { #expect(BrandedSplashView.minimumDuration == .seconds(3)) }
     @Test func instructionsAreGroupedIntoOrderedSections() {
         let sections = DemoData.instructions.patternSections
-        #expect(sections.map(\.title) == ["Back panel", "Left front", "Sleeves"])
-        #expect(sections.map(\.firstPosition) == [1, 4, 6])
-        #expect(sections[0].lastPosition == 3)
+        #expect(sections.count == 22)
+        #expect(sections.first?.title == "APPLE")
+        #expect(sections.first?.firstPosition == 1)
+        #expect(sections.first?.lastPosition == 6)
+        #expect(sections.last?.title == "TO MAKE UP")
+        #expect(sections.last?.lastPosition == DemoData.instructions.count)
+        #expect(sections.flatMap(\.instructions).map(\.position) == Array(1...DemoData.instructions.count))
     }
     @Test func repeatedRowRangesBecomeOneReaderStepWithTheWorkedRepeatCount() {
         let repeatedRows = (9...72).map { row in

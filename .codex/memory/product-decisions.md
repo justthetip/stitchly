@@ -8,6 +8,7 @@
 - Native authentication is email/password plus Sign in with Apple. Google auth remains available on web only.
 - Patterns need a complete native overview grouped into source-order sections; alphabetical section sorting is incorrect.
 - The focused reader must let a maker jump directly between sections and persist the selected position.
+- Guests can advance, go back, and jump between sections in the bundled demo project without authenticating. Save that demo reader position only on the device; cloud sync, notes, project completion, and private project creation remain account actions.
 - Original PDF terminology and labels matter. Do not normalize away meaningful row, round, setup, finishing, size, or section labels.
 
 ## Visual system

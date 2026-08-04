@@ -8,7 +8,7 @@ import { PatternArt, CraftArt } from "@/components/craft-art";
 import { PatternCover } from "@/components/pattern-cover";
 import { Progress } from "@/components/ui/progress";
 import { authClient } from "@/lib/auth-client";
-import { demoProjects } from "@/lib/demo-data";
+import { demoProject, demoProjects, isDemoProject } from "@/lib/demo-data";
 type Project = {
   id: string;
   name: string;
@@ -30,7 +30,7 @@ export default function ProjectsPage() {
     if (session.isPending) return;
     if (!session.data?.user) {
       const timer = setTimeout(() => {
-        setProjects(demoProjects);
+        setProjects(demoProjects.map((project) => demoProject(project.id) ?? project));
         setLoading(false);
       }, 0);
       return () => clearTimeout(timer);
@@ -129,7 +129,12 @@ export default function ProjectsPage() {
                       kind="project"
                       alt={`${project.pattern_name} cover`}
                     />
-                      <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold">
+                      {isDemoProject(project.id) && (
+                        <span className="absolute left-4 top-4 rounded-full bg-[#c23357] px-3 py-1 text-[10px] font-black tracking-wide text-white shadow-sm">
+                          DEMO PROJECT
+                        </span>
+                      )}
+                      <span className="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold">
                         {project.craft}
                       </span>
                     </div>

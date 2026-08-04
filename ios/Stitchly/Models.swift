@@ -163,6 +163,19 @@ enum DemoData {
     static let project = catalog.project
     static let instructions = instructions(for: pattern.id)
 
+    static var projectWithLocalProgress: Project {
+        let savedPosition = UserDefaults.standard.integer(forKey: "demoReaderPosition")
+        guard savedPosition > 0,
+              savedPosition <= (project.totalInstructions ?? pattern.totalInstructions),
+              savedPosition != project.currentInstruction else { return project }
+        return Project(
+            id: project.id, patternId: project.patternId, name: project.name, status: project.status,
+            yarn: project.yarn, currentInstruction: savedPosition, patternName: project.patternName,
+            totalInstructions: project.totalInstructions, craft: project.craft, startedAt: project.startedAt,
+            lastWorkedAt: project.lastWorkedAt, completedAt: project.completedAt, coverUrl: project.coverUrl
+        )
+    }
+
     static func instructions(for patternID: String) -> [Instruction] {
         catalog.instructions[patternID] ?? []
     }

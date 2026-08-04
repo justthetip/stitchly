@@ -30,11 +30,11 @@ struct RootView: View {
             else if auth.isRestoring { LoadingStateView(title: "Opening Stitchly", message: "Restoring your secure session and syncing your account.") }
             else if shouldShowOnboarding { OnboardingView { hasCompletedOnboarding = true } }
             else if arguments.contains("-showAuthForUITests") { SignInView() }
-            else if arguments.contains("-projectOverviewDemo") { NavigationStack { ProjectOverviewView(project: DemoData.project) {} } }
+            else if arguments.contains("-projectOverviewDemo") { NavigationStack { ProjectOverviewView(project: DemoData.projectWithLocalProgress) {} } }
             else if ProcessInfo.processInfo.arguments.contains("-patternDemo") { NavigationStack { PatternDetailView(pattern: DemoData.pattern) } }
-            else if ProcessInfo.processInfo.arguments.contains("-readerSectionsDemo") { NavigationStack { ReaderView(project: DemoData.project, showSectionsInitially: true) } }
+            else if ProcessInfo.processInfo.arguments.contains("-readerSectionsDemo") { NavigationStack { ReaderView(project: DemoData.projectWithLocalProgress, showSectionsInitially: true) } }
             else if ProcessInfo.processInfo.arguments.contains("-readerRepeatDemo") { NavigationStack { ReaderView(project: DemoData.repeatProject) } }
-            else if ProcessInfo.processInfo.arguments.contains("-readerDemo") { NavigationStack { ReaderView(project: DemoData.project) } }
+            else if ProcessInfo.processInfo.arguments.contains("-readerDemo") { NavigationStack { ReaderView(project: DemoData.projectWithLocalProgress) } }
             else { MainTabs() }
         }
             .onAppear {
@@ -96,7 +96,7 @@ struct SignInView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var name = ""
-    @State private var createAccount = false
+    @State private var createAccount = true
     @State private var emailExpanded = ProcessInfo.processInfo.arguments.contains("-authSubmittingDemo")
     @State private var showPassword = false
     @State private var hasAttemptedSubmit = false
@@ -130,8 +130,10 @@ struct SignInView: View {
             LinearGradient(colors: [.cream, .white, .brandPink.opacity(0.16)], startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 18) {
-                    Image("BrandIcon").resizable().scaledToFit().frame(width: 82, height: 82).clipShape(.rect(cornerRadius: 20)).shadow(color: .brandPink.opacity(0.2), radius: 16, y: 8)
-                    Text("Stitchly").font(.system(.largeTitle, design: .rounded, weight: .bold)).foregroundStyle(Color.ink)
+                    if !emailExpanded {
+                        Image("BrandIcon").resizable().scaledToFit().frame(width: 82, height: 82).clipShape(.rect(cornerRadius: 20)).shadow(color: .brandPink.opacity(0.2), radius: 16, y: 8)
+                        Text("Stitchly").font(.system(.largeTitle, design: .rounded, weight: .bold)).foregroundStyle(Color.ink)
+                    }
                     if let contextTitle {
                         Label(contextTitle, systemImage: "icloud.and.arrow.up")
                             .font(.subheadline.weight(.semibold))
@@ -143,25 +145,41 @@ struct SignInView: View {
                         .accessibilityElement(children: .combine)
                         .accessibilityHint(contextMessage ?? "")
                         .accessibilityIdentifier("authentication-context")
-                    } else {
+                    } else if !emailExpanded {
                         Text("Save your projects and pick up anywhere.")
                             .font(.subheadline)
                             .foregroundStyle(Color.ink)
                     }
                     if emailExpanded {
-                        Button {
-                            guard !isWorking else { return }
-                            focusedField = nil
-                            withAnimation { emailExpanded = false }
-                        } label: {
-                            Label("Use another sign-in option", systemImage: "chevron.left")
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                                .contentShape(.rect)
+                        HStack {
+                            Button {
+                                guard !isWorking else { return }
+                                focusedField = nil
+                                withAnimation { emailExpanded = false }
+                            } label: {
+                                Label("Sign-in options", systemImage: "chevron.left")
+                                    .padding(.horizontal, 14)
+                                    .frame(minHeight: 44)
+                                    .contentShape(.capsule)
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.ink)
+                            .background(Color.white.opacity(0.82), in: .capsule)
+                            .overlay {
+                                Capsule().stroke(Color.ink.opacity(0.12), lineWidth: 1)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(isWorking)
+                            .accessibilityLabel("Back to sign-in options")
+                            .accessibilityIdentifier("back-to-sign-in-options")
+                            Spacer(minLength: 0)
                         }
-                        .font(.subheadline.weight(.semibold))
-                        .tint(.ink)
-                        .buttonStyle(.plain)
-                        .disabled(isWorking)
+                        Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account", action: toggleMode)
+                            .font(.subheadline.weight(.semibold))
+                            .tint(.ink)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .contentShape(.rect)
+                            .disabled(isWorking)
                         VStack(spacing: 12) {
                             if createAccount {
                                 authField("Your name", icon: "person", focus: .name, isInvalid: hasAttemptedSubmit && nameIsInvalid) {
@@ -238,12 +256,6 @@ struct SignInView: View {
                         .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
                         .allowsHitTesting(!isWorking)
                         .accessibilityIdentifier("auth-submit-button")
-                        Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account", action: toggleMode)
-                            .font(.subheadline.weight(.semibold))
-                            .tint(.ink)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .contentShape(.rect)
-                            .disabled(isWorking)
                     } else {
                         SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
                             .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(isWorking)
