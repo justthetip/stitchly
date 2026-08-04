@@ -313,48 +313,49 @@ struct LoadingStateView: View {
     @State private var isPresented = false
     @State private var isAnimating = false
 
-    private var artworkSize: CGFloat { dynamicTypeSize.isAccessibilitySize ? 170 : 240 }
-    private let dotColors: [Color] = [.brandPink, .cream, .brandBlue]
+    private var artworkCanvasSize: CGFloat { dynamicTypeSize.isAccessibilitySize ? 164 : 196 }
+    private var spinnerSize: CGFloat { dynamicTypeSize.isAccessibilitySize ? 152 : 180 }
+    private var spinnerRadius: CGFloat { spinnerSize / 2 - 8 }
+    private let stitchColors: [Color] = [.brandPink, .brandBlue, .ink, .brandOrange]
 
     var body: some View {
-        ZStack {
-            Color("LaunchBackground").ignoresSafeArea()
+        VStack(spacing: dynamicTypeSize.isAccessibilitySize ? 10 : 14) {
+            ZStack {
+                ZStack {
+                    ForEach(0..<10, id: \.self) { index in
+                        Capsule()
+                            .fill(stitchColors[index % stitchColors.count])
+                            .frame(width: index.isMultiple(of: 2) ? 15 : 9, height: 5)
+                            .offset(y: -spinnerRadius)
+                            .rotationEffect(.degrees(Double(index) * 36))
+                    }
+                }
+                .frame(width: spinnerSize, height: spinnerSize)
+                .rotationEffect(.degrees(reduceMotion ? 0 : (isAnimating ? 360 : 0)))
+                .animation(reduceMotion ? nil : .linear(duration: 1.8).repeatForever(autoreverses: false), value: isAnimating)
+                .accessibilityHidden(true)
 
-            VStack(spacing: dynamicTypeSize.isAccessibilitySize ? 14 : 18) {
                 Image("LoadingStitch")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: artworkSize, height: artworkSize)
-                    .shadow(color: Color.ink.opacity(0.12), radius: 12, y: 8)
-                    .scaleEffect(reduceMotion ? 1 : (isAnimating ? 1.025 : 0.985))
-                    .offset(y: reduceMotion ? 0 : (isAnimating ? -5 : 3))
+                    .frame(width: artworkCanvasSize, height: artworkCanvasSize)
+                    .shadow(color: .white.opacity(0.9), radius: 3)
+                    .shadow(color: Color.ink.opacity(0.14), radius: 8, y: 5)
+                    .scaleEffect(reduceMotion ? 1 : (isAnimating ? 1.02 : 0.99))
+                    .offset(y: reduceMotion ? 5 : (isAnimating ? 2 : 8))
                     .animation(reduceMotion ? nil : .easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isAnimating)
                     .accessibilityHidden(true)
-
-                Text(title)
-                    .font(.title3.bold())
-                    .foregroundStyle(Color.ink)
-                    .multilineTextAlignment(.center)
-
-                HStack(spacing: 8) {
-                    ForEach(dotColors.indices, id: \.self) { index in
-                        Circle()
-                            .fill(dotColors[index])
-                            .frame(width: 8, height: 8)
-                            .offset(y: reduceMotion ? 0 : (isAnimating ? -3 : 3))
-                            .animation(
-                                reduceMotion ? nil : .easeInOut(duration: 0.7)
-                                    .repeatForever(autoreverses: true)
-                                    .delay(Double(index) * 0.14),
-                                value: isAnimating
-                            )
-                    }
-                }
-                .accessibilityHidden(true)
             }
-            .padding(.horizontal, 24)
+            .frame(width: spinnerSize, height: spinnerSize)
+
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(Color.ink)
+                .multilineTextAlignment(.center)
+                .shadow(color: Color(.systemBackground), radius: 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 24)
         .opacity(isPresented ? 1 : 0)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title). \(message)")

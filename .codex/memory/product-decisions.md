@@ -20,7 +20,7 @@
 ## Loading and errors
 
 - A spinner without context is insufficient.
-- Initial loads that survive a 250 ms anti-flash delay use the generated Stitchly yarn character over the exact launch-screen orange, with a concise visible operation title. The fuller resource explanation remains in the combined VoiceOver label so the screen stays calm without losing context.
+- Initial loads that survive a 250 ms anti-flash delay use a compact transparent knitting character at roughly half the splash illustration's visual size. A sparse ring of code-native brand-colour “stitches” rotates around it; there is no full-screen colour or grey material card. The concise operation title stays visible while the fuller resource explanation remains in the combined VoiceOver label.
 - Branded loading motion is implemented in SwiftUI around a static transparent raster and stops under Reduce Motion; do not introduce a GIF, video, or animation runtime casually.
 - Existing content remains visible during refreshes with a compact progress banner.
 - PDF import distinguishes upload, PDF analysis/section extraction, and library refresh.
