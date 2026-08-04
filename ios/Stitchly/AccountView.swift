@@ -8,8 +8,17 @@ struct AccountView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section { HStack(spacing: 14) { Image(systemName: "person.crop.circle.fill").font(.system(size: 48)).foregroundStyle(Color.brandPink); VStack(alignment: .leading) { Text(auth.user?.name ?? "Stitchly maker").font(.headline); if let email = auth.user?.email { Text(email).font(.subheadline).foregroundStyle(.secondary) } } }.padding(.vertical, 8) }
-                Section { Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right") { operationMessage = "Signing out and closing your secure session…"; Task { await auth.signOut() } }.disabled(auth.isWorking); Button("Delete account", systemImage: "trash", role: .destructive) { confirmDelete = true }.disabled(auth.isWorking) }
+                Section { HStack(spacing: 14) { Image(systemName: "person.crop.circle.fill").font(.system(size: 48)).foregroundStyle(Color.brandPink); VStack(alignment: .leading) { Text(auth.user?.name ?? "Exploring as a guest").font(.headline); if let email = auth.user?.email { Text(email).font(.subheadline).foregroundStyle(.secondary) } else { Text("Browse the demo, then create an account when you want to save.").font(.subheadline).foregroundStyle(.secondary) } } }.padding(.vertical, 8) }
+                if auth.isGuest {
+                    Section {
+                        Button("Sign in or create account", systemImage: "person.crop.circle.badge.plus") {
+                            auth.requireAuthentication(title: "Keep your making together", message: "Create an account or sign in to upload private patterns, save progress, and keep notes in sync.")
+                        }
+                        .accessibilityIdentifier("guest-account-action")
+                    }
+                } else {
+                    Section { Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right") { operationMessage = "Signing out and closing your secure session…"; Task { await auth.signOut() } }.disabled(auth.isWorking); Button("Delete account", systemImage: "trash", role: .destructive) { confirmDelete = true }.disabled(auth.isWorking) }
+                }
                 Section { LabeledContent("Version", value: "1.0.0"); Link("Privacy policy", destination: APIClient.baseURL.appending(path: "/privacy")); Link("Support", destination: APIClient.baseURL.appending(path: "/support")) }
             }.navigationTitle("Account")
                 .disabled(auth.isWorking)

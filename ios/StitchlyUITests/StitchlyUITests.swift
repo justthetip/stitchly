@@ -62,7 +62,7 @@ import XCTest
 
     func testNativeAuthenticationScreenIsAccessible() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-skipFirstLaunchSplashForUITests"]
+        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-showAuthForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         let email = app.textFields["Email address"]
         let password = app.secureTextFields["Password"]
@@ -78,7 +78,7 @@ import XCTest
 
     func testAuthSubmitLoadingStateKeepsTheLargeButtonGeometry() {
         let app = XCUIApplication()
-        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-authSubmittingDemo", "-skipFirstLaunchSplashForUITests"]
+        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-showAuthForUITests", "-authSubmittingDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         let submit = app.buttons["auth-submit-button"]
         XCTAssertTrue(submit.waitForExistence(timeout: 5))
@@ -88,7 +88,7 @@ import XCTest
 
     func testAuthenticationFieldsSupportEdgeTapsKeyboardProgressionAndModeSwitching() {
         let app = XCUIApplication()
-        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-skipFirstLaunchSplashForUITests"]
+        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-showAuthForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
 
         let email = app.textFields["Email address"]
@@ -132,8 +132,8 @@ import XCTest
         app.buttons["Next"].tap()
         XCTAssertTrue(app.staticTexts["Make without losing your place"].waitForExistence(timeout: 3))
         try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
-        app.buttons["Continue"].tap()
-        XCTAssertTrue(app.textFields["Email address"].waitForExistence(timeout: 3))
+        app.buttons["Explore"].tap()
+        XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 3))
     }
 
     func testFirstInstallSplashHoldsBeforeOnboarding() {
@@ -151,7 +151,24 @@ import XCTest
         app.launch()
         XCTAssertTrue(app.buttons["Skip"].waitForExistence(timeout: 5))
         app.buttons["Skip"].tap()
-        XCTAssertTrue(app.textFields["Email address"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 3))
+    }
+
+    func testGuestCanBrowseLibraryAndGetsAContextualAccountGate() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-skipFirstLaunchSplashForUITests"]
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Library"].tap()
+        XCTAssertTrue(app.staticTexts["Wildflower Cardigan"].waitForExistence(timeout: 5))
+        app.staticTexts["Wildflower Cardigan"].tap()
+        XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
+        app.buttons["start-pattern-project"].tap()
+        XCTAssertTrue(app.staticTexts["Create an account to start a project"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["New here? Create an account"].exists)
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
     }
 
     func testReaderPassesAccessibilityAudit() throws {

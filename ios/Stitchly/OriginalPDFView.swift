@@ -43,8 +43,8 @@ struct OriginalPDFView: View {
         isLoading = true
         error = nil
         defer { isLoading = false }
-        if auth.token == "demo" {
-            error = "The demo pattern does not include its source PDF."
+        if auth.isGuest || auth.token == "demo" {
+            error = "This demo pattern does not include its source PDF yet."
             return
         }
         do {

@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PatternCover } from "@/components/pattern-cover";
 import { ScreenHeader } from "@/components/screen-header";
+import { AccountGateButton } from "@/components/account-gate";
+import { authClient } from "@/lib/auth-client";
+import { demoPattern } from "@/lib/demo-data";
 
 type Pattern = {
   id: string;
@@ -28,6 +31,7 @@ export default function NewProjectPage() {
 }
 function NewProjectForm() {
   const router = useRouter();
+  const session = authClient.useSession();
   const search = useSearchParams();
   const id = search.get("pattern");
   const [pattern, setPattern] = useState<Pattern | null>(null);
@@ -38,6 +42,14 @@ function NewProjectForm() {
   const [error, setError] = useState("");
   useEffect(() => {
     if (!id) return;
+    const bundled = demoPattern(id);
+    if (bundled) {
+      const timer = setTimeout(() => {
+        setPattern(bundled);
+        setName(`${bundled.name} project`);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
     let cancelled = false;
     fetch(`/api/patterns/${id}`)
       .then(async (response) => {
@@ -60,7 +72,7 @@ function NewProjectForm() {
   }, [id]);
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!pattern) return;
+    if (!pattern || !session.data?.user) return;
     setBusy(true);
     setError("");
     try {
@@ -94,6 +106,20 @@ function NewProjectForm() {
         </Link>
       </div>
     );
+  if (!session.isPending && !session.data?.user) {
+    return (
+      <div className="pb-10">
+        <ScreenHeader back={`/library/${id}`} title="Start a project" />
+        <div className="mx-auto max-w-lg px-5 py-16 text-center">
+          <h1 className="font-heading text-3xl font-black">Ready to make this?</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Create an account to save your yarn, notes, and place in the pattern.</p>
+          <AccountGateButton title="Create an account to start a project" message="Projects save your yarn, notes, and place in the pattern across devices." next={`/projects/new?pattern=${id}`} className="mt-6 inline-flex rounded-2xl bg-primary px-6 py-3.5 font-heading font-extrabold text-white">
+            Continue
+          </AccountGateButton>
+        </div>
+      </div>
+    );
+  }
   if (!pattern)
     return (
       <p className="px-5 py-24 text-center text-sm font-bold text-muted-foreground">

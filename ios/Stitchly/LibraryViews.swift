@@ -28,7 +28,7 @@ enum PatternLibraryFiltering {
     func load(client: APIClient, userID: String?, forceRefresh: Bool = false, message: String = "Loading your pattern library…") async {
         loadingMessage = message
         error = nil
-        if client.token == "demo" {
+        if userID == nil || client.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
             patterns = ProcessInfo.processInfo.arguments.contains("-emptyLibraryDemo") ? [] : [DemoData.pattern]
@@ -129,7 +129,14 @@ struct LibraryView: View {
         }
     }
     private func resetFilters() { searchText = ""; craftFilter = .all }
-    private func beginImport() { guard !store.isLoading, !importing, !showImportIntroduction else { return }; showImportIntroduction = true }
+    private func beginImport() {
+        guard !store.isLoading, !importing, !showImportIntroduction else { return }
+        guard !auth.isGuest else {
+            auth.requireAuthentication(title: "Create an account to import a pattern", message: "Your PDF and its extracted instructions stay private and need an account owner.")
+            return
+        }
+        showImportIntroduction = true
+    }
     private func finishReview(_ response: PatternResponse) {
         reviewResponse = nil
         if auth.token == "demo" && reviewWasExample {
@@ -147,6 +154,11 @@ struct LibraryView: View {
     }
     private func deletePattern(_ pattern: Pattern) async {
         guard !deletingPattern else { return }
+        guard !auth.isGuest else {
+            patternToDelete = nil
+            auth.requireAuthentication(title: "Sign in to manage patterns", message: "The starter catalog is read-only. Create an account to add and manage your own private patterns.")
+            return
+        }
         deletingPattern = true; patternToDelete = nil
         store.loadingMessage = "Deleting \(pattern.name), its PDF, and linked projects…"
         store.isLoading = true
@@ -377,7 +389,7 @@ struct PatternDetailView: View {
                     Text(pattern.name).font(.largeTitle.bold())
                     if let designer = pattern.designer { Text("by \(designer)").foregroundStyle(.secondary) }
                     HStack { if let yarn = pattern.yarn { Label(yarn, systemImage: "circle.fill") }; if let tool = pattern.tool { Label(tool, systemImage: "wrench.and.screwdriver") } }.font(.subheadline).foregroundStyle(.secondary)
-                    Button { createProject = true } label: { Label("Start a project", systemImage: "plus").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).accessibilityIdentifier("start-pattern-project")
+                    Button { beginProject() } label: { Label("Start a project", systemImage: "plus").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).accessibilityIdentifier("start-pattern-project")
                     Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext").frame(maxWidth: .infinity) }.buttonStyle(.bordered).tint(.ink).controlSize(.large).accessibilityIdentifier("pattern-original-pdf")
                 }.padding(.vertical)
             }
@@ -408,7 +420,7 @@ struct PatternDetailView: View {
         .alert("Couldn’t open pattern", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("Try again") { Task { await load() } } } message: { Text(error ?? "") }
     }
     private func load() async {
-        if auth.token == "demo" {
+        if auth.isGuest || auth.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
             instructions = DemoData.instructions
@@ -422,6 +434,13 @@ struct PatternDetailView: View {
         defer { isLoading = false }
         do { instructions = try await AppDataCache.shared.refreshPatternDetail(for: userID, patternID: pattern.id, client: auth.client).instructions }
         catch { if instructions.isEmpty { self.error = error.localizedDescription } }
+    }
+    private func beginProject() {
+        guard !auth.isGuest else {
+            auth.requireAuthentication(title: "Create an account to start a project", message: "Projects save your yarn, notes, and place in the pattern across devices.")
+            return
+        }
+        createProject = true
     }
 }
 

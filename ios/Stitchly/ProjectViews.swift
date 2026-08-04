@@ -10,7 +10,7 @@ import StoreKit
 
     func load(client: APIClient, userID: String?, forceRefresh: Bool = false) async {
         error = nil
-        if client.token == "demo" {
+        if userID == nil || client.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
             activeProject = ProcessInfo.processInfo.arguments.contains("-emptyProjectsDemo") ? nil : DemoData.project
@@ -143,7 +143,7 @@ private struct GettingStartedGuide: View {
     func load(client: APIClient, userID: String?, forceRefresh: Bool = false, message: String = "Loading your projects and saved progress…") async {
         loadingMessage = message
         error = nil
-        if client.token == "demo" {
+        if userID == nil || client.token == "demo" {
             loading = true; defer { loading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
             projects = ProcessInfo.processInfo.arguments.contains("-emptyProjectsDemo") ? [] : [DemoData.project]
@@ -196,7 +196,14 @@ struct ProjectsView: View {
                 } message: { project in Text("This permanently deletes \(project.name), its progress, and notes. The pattern stays in your library.") }
         }
     }
-    private func beginCreatingProject() { guard !store.loading, !createProject else { return }; createProject = true }
+    private func beginCreatingProject() {
+        guard !store.loading, !createProject else { return }
+        guard !auth.isGuest else {
+            auth.requireAuthentication(title: "Create an account to start a project", message: "Projects save your yarn, notes, and place in the pattern across devices.")
+            return
+        }
+        createProject = true
+    }
     private func projectLink(_ project: Project) -> some View {
         NavigationLink(value: project) { ProjectRow(project: project) }
             .swipeActions {
@@ -206,6 +213,11 @@ struct ProjectsView: View {
     }
     private func deleteProject(_ project: Project) async {
         guard !deletingProject else { return }
+        guard !auth.isGuest else {
+            projectToDelete = nil
+            auth.requireAuthentication(title: "Sign in to manage projects", message: "The demo project is read-only. Create an account to make and manage your own projects.")
+            return
+        }
         deletingProject = true; projectToDelete = nil
         store.loadingMessage = "Deleting \(project.name), its progress, and notes…"
         store.loading = true
@@ -268,7 +280,7 @@ struct ProjectOverviewView: View {
                 Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext") }
                     .accessibilityIdentifier("project-original-pdf")
                 if !isCompleted {
-                    Button { confirmCompletion = true } label: { Label("Mark project complete", systemImage: "checkmark.circle") }
+                    Button { beginCompletion() } label: { Label("Mark project complete", systemImage: "checkmark.circle") }
                         .disabled(isCompleting)
                         .accessibilityIdentifier("complete-project")
                 }
@@ -288,7 +300,7 @@ struct ProjectOverviewView: View {
         .alert("Couldn’t update project", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("Try again") { Task { await load() } } } message: { Text(error ?? "") }
     }
     private func load() async {
-        if auth.token == "demo" { isLoading = true; defer { isLoading = false }; detail = ProjectResponse(project: project, instructions: DemoData.instructions, notes: DemoData.notes); return }
+        if auth.isGuest || auth.token == "demo" { isLoading = true; defer { isLoading = false }; detail = ProjectResponse(project: project, instructions: DemoData.instructions, notes: DemoData.notes); return }
         guard let userID = auth.user?.id else { return }
         let cached = await AppDataCache.shared.cachedProjectDetail(for: userID, projectID: project.id)
         if detail == nil, let cached { detail = cached.value }
@@ -308,6 +320,13 @@ struct ProjectOverviewView: View {
             if let userID = auth.user?.id { await AppDataCache.shared.invalidateProject(for: userID, projectID: project.id) }
             isCompleted = true; onUpdated()
         } catch { self.error = error.localizedDescription }
+    }
+    private func beginCompletion() {
+        guard !auth.isGuest else {
+            auth.requireAuthentication(title: "Create an account to complete projects", message: "Sign in to save completion, progress, and notes to your maker space.")
+            return
+        }
+        confirmCompletion = true
     }
 }
 
@@ -397,7 +416,11 @@ struct ReaderView: View {
                         .accessibilityIdentifier("reader-sections")
                     Button("View original PDF", systemImage: "doc.richtext") { showOriginal = true }
                         .accessibilityIdentifier("reader-original-pdf")
-                    Button("Add note", systemImage: "square.and.pencil") { showNotes = true }
+                    Button("Add note", systemImage: "square.and.pencil") {
+                        if auth.isGuest {
+                            auth.requireAuthentication(title: "Create an account to add notes", message: "Notes are private and stay attached to your saved project step.")
+                        } else { showNotes = true }
+                    }
                 } label: {
                     Label("Reader actions", systemImage: "ellipsis.circle")
                 }
@@ -558,7 +581,7 @@ struct ReaderView: View {
     }
     private func loadReader() async {
         Telemetry.shared.track("reader_opened")
-        if auth.token == "demo" {
+        if auth.isGuest || auth.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
             if ProcessInfo.processInfo.arguments.contains("-readerRepeatDemo") { instructions = DemoData.repeatInstructions; position = DemoData.repeatProject.currentInstruction; return }
@@ -577,6 +600,10 @@ struct ReaderView: View {
         catch { if instructions.isEmpty { readerError = error.localizedDescription } }
     }
     private func persistProgress() async {
+        guard !auth.isGuest else {
+            auth.requireAuthentication(title: "Create an account to save your place", message: "Sign in to keep this step synced and resume it on any device.")
+            return
+        }
         if auth.token == "demo" { UserDefaults.standard.set(position, forKey: "demoReaderPosition"); return }
         isSavingProgress = true; defer { isSavingProgress = false }
         struct Body: Encodable { let currentInstruction: Int }
@@ -588,6 +615,10 @@ struct ReaderView: View {
     }
     private func completeProject() async {
         guard !isCompletingProject, isAtLastStep, !hasCompletedProject else { return }
+        guard !auth.isGuest else {
+            auth.requireAuthentication(title: "Create an account to complete projects", message: "Sign in to save completion, progress, and notes to your maker space.")
+            return
+        }
         isCompletingProject = true
         defer { isCompletingProject = false }
         if let lastPosition = currentStep?.lastPosition { position = lastPosition }
@@ -609,6 +640,11 @@ struct ReaderView: View {
         showCompletion = true
     }
     private func saveNote() async {
+        guard !auth.isGuest else {
+            showNotes = false
+            auth.requireAuthentication(title: "Create an account to add notes", message: "Notes are private and stay attached to your saved project step.")
+            return
+        }
         guard auth.token != "demo" else { note = ""; showNotes = false; return }
         isSavingNote = true; defer { isSavingNote = false }
         struct Body: Encodable { let instructionPosition: Int; let body: String }
@@ -719,7 +755,7 @@ struct CreateProjectView: View {
         }
     }
     private func loadPatterns() async {
-        if auth.token == "demo" {
+        if auth.isGuest || auth.token == "demo" {
             isLoadingPatterns = true; defer { isLoadingPatterns = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
             patterns = [DemoData.pattern]; selected = initialPattern?.id ?? DemoData.pattern.id

@@ -29,7 +29,7 @@ struct RootView: View {
             if shouldShowFirstLaunchSplash { BrandedSplashView().task { await finishFirstLaunchSplash() } }
             else if auth.isRestoring { LoadingStateView(title: "Opening Stitchly", message: "Restoring your secure session and syncing your account.") }
             else if shouldShowOnboarding { OnboardingView { hasCompletedOnboarding = true } }
-            else if auth.user == nil { SignInView() }
+            else if arguments.contains("-showAuthForUITests") { SignInView() }
             else if ProcessInfo.processInfo.arguments.contains("-patternDemo") { NavigationStack { PatternDetailView(pattern: DemoData.pattern) } }
             else if ProcessInfo.processInfo.arguments.contains("-readerSectionsDemo") { NavigationStack { ReaderView(project: DemoData.project, showSectionsInitially: true) } }
             else if ProcessInfo.processInfo.arguments.contains("-readerRepeatDemo") { NavigationStack { ReaderView(project: DemoData.repeatProject) } }
@@ -41,6 +41,18 @@ struct RootView: View {
                 if arguments.contains("-resetFirstLaunchSplashForUITests") { hasShownFirstLaunchSplash = false }
             }
             .alert("Something went wrong", isPresented: .init(get: { auth.errorMessage != nil }, set: { if !$0 { auth.errorMessage = nil } })) { Button("OK") {} } message: { Text(auth.errorMessage ?? "Please try again.") }
+            .sheet(item: $auth.authenticationRequest) { request in
+                NavigationStack {
+                    SignInView(
+                        contextTitle: request.title,
+                        contextMessage: request.message,
+                        showsCancel: true
+                    )
+                    .onChange(of: auth.user?.id) { _, userID in
+                        if userID != nil { auth.dismissAuthenticationRequest() }
+                    }
+                }
+            }
             .onChange(of: auth.token, initial: true) { _, _ in Telemetry.shared.configure(client: auth.client) }
     }
 
@@ -87,6 +99,15 @@ struct SignInView: View {
     @State private var showPassword = false
     @State private var hasAttemptedSubmit = false
     @State private var isSubmitting = ProcessInfo.processInfo.arguments.contains("-authSubmittingDemo")
+    let contextTitle: String?
+    let contextMessage: String?
+    let showsCancel: Bool
+
+    init(contextTitle: String? = nil, contextMessage: String? = nil, showsCancel: Bool = false) {
+        self.contextTitle = contextTitle
+        self.contextMessage = contextMessage
+        self.showsCancel = showsCancel
+    }
 
     private var nameIsInvalid: Bool { createAccount && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var emailIsInvalid: Bool { !email.contains("@") }
@@ -109,6 +130,25 @@ struct SignInView: View {
                 VStack(spacing: 22) {
                     Image("BrandIcon").resizable().scaledToFit().frame(width: 108, height: 108).clipShape(.rect(cornerRadius: 24)).shadow(color: .brandPink.opacity(0.22), radius: 20, y: 10)
                     VStack(spacing: 6) { Text("Stitchly").font(.system(.largeTitle, design: .rounded, weight: .bold)).foregroundStyle(Color.ink); Text(createAccount ? "Create your maker space." : "Welcome back, maker.").font(.title3).foregroundStyle(.secondary) }
+                    if let contextTitle {
+                        VStack(spacing: 6) {
+                            Text(contextTitle)
+                                .font(.headline)
+                                .foregroundStyle(Color.ink)
+                                .multilineTextAlignment(.center)
+                            if let contextMessage {
+                                Text(contextMessage)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                        }
+                        .padding(14)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white.opacity(0.72), in: .rect(cornerRadius: 16))
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("authentication-context")
+                    }
                     Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account", action: toggleMode)
                         .font(.subheadline.weight(.semibold)).tint(.ink).frame(minHeight: 44).contentShape(.rect).disabled(isWorking)
                     VStack(spacing: 12) {
@@ -212,6 +252,14 @@ struct SignInView: View {
                     .padding(.horizontal, 16)
                     .frame(minHeight: 44)
                     .background(.bar)
+                }
+            }
+            .toolbar {
+                if showsCancel {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { auth.dismissAuthenticationRequest() }
+                            .disabled(isWorking)
+                    }
                 }
             }
         }

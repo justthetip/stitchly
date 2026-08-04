@@ -3,12 +3,19 @@ import CryptoKit
 import Foundation
 import Security
 
+struct AuthenticationRequest: Identifiable, Equatable {
+    let id = UUID()
+    let title: String
+    let message: String
+}
+
 @MainActor final class AuthManager: ObservableObject {
     @Published private(set) var user: User?
     @Published private(set) var token: String?
     @Published var errorMessage: String?
     @Published var isWorking = false
     @Published private(set) var isRestoring = false
+    @Published var authenticationRequest: AuthenticationRequest?
     private var nonce: String?
     private let keychainKey = "native-session"
 
@@ -25,6 +32,14 @@ import Security
     }
 
     var client: APIClient { APIClient(token: token) }
+    var isGuest: Bool { user == nil }
+
+    func requireAuthentication(title: String, message: String) {
+        guard isGuest, authenticationRequest == nil else { return }
+        authenticationRequest = AuthenticationRequest(title: title, message: message)
+    }
+
+    func dismissAuthenticationRequest() { authenticationRequest = nil }
 
     func restore() async {
         guard token != nil, token != "demo" else { isRestoring = false; return }
@@ -52,6 +67,7 @@ import Security
             guard let issuedToken = response.token else { throw APIError.invalidResponse }
             if let previousUserID = user?.id, previousUserID != response.user.id { await AppDataCache.shared.clear(for: previousUserID) }
             token = issuedToken; user = response.user; Keychain.write(issuedToken, key: keychainKey)
+            authenticationRequest = nil
         } catch { errorMessage = error.localizedDescription }
     }
 
@@ -63,6 +79,7 @@ import Security
             guard let issuedToken = response.token else { throw APIError.invalidResponse }
             if let previousUserID = user?.id, previousUserID != response.user.id { await AppDataCache.shared.clear(for: previousUserID) }
             token = issuedToken; user = response.user; Keychain.write(issuedToken, key: keychainKey)
+            authenticationRequest = nil
         } catch { errorMessage = error.localizedDescription }
     }
 

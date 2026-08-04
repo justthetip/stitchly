@@ -46,7 +46,7 @@ struct OnboardingView: View {
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.ink)
                         .frame(minHeight: 44)
-                        .accessibilityHint("Shows sign in and account creation")
+                        .accessibilityHint("Opens Stitchly in guest mode")
                 }
                 .padding(.horizontal, 24)
 
@@ -82,7 +82,7 @@ struct OnboardingView: View {
                         if selection == OnboardingPage.pages.count - 1 { onComplete() }
                         else { move(to: selection + 1) }
                     } label: {
-                        Text(selection == OnboardingPage.pages.count - 1 ? "Continue" : "Next")
+                        Text(selection == OnboardingPage.pages.count - 1 ? "Explore" : "Next")
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                     }
@@ -90,7 +90,7 @@ struct OnboardingView: View {
                     .tint(.ink)
                     .controlSize(.large)
                     .frame(maxWidth: .infinity)
-                    .accessibilityHint(selection == OnboardingPage.pages.count - 1 ? "Shows sign in and account creation" : "Shows the next introduction page")
+                    .accessibilityHint(selection == OnboardingPage.pages.count - 1 ? "Opens Stitchly in guest mode" : "Shows the next introduction page")
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 20)

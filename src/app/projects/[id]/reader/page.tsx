@@ -20,6 +20,9 @@ import {
   type PatternInstructionRecord,
 } from "@/lib/pattern-instructions";
 import { cn } from "@/lib/utils";
+import { AccountGateButton } from "@/components/account-gate";
+import { authClient } from "@/lib/auth-client";
+import { demoInstructions, demoProject } from "@/lib/demo-data";
 
 type Project = {
   id: string;
@@ -33,6 +36,7 @@ type Note = { id: string; instruction_position: number | null; body: string };
 
 export default function ReaderPage() {
   const params = useParams<{ id: string }>();
+  const session = authClient.useSession();
   const [project, setProject] = useState<Project | null>(null);
   const [instructions, setInstructions] = useState<PatternInstructionRecord[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -44,6 +48,17 @@ export default function ReaderPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const bundled = demoProject(params.id);
+    if (bundled) {
+      const timer = setTimeout(() => {
+        setProject(bundled);
+        setInstructions(demoInstructions);
+        setNotes([]);
+        setIndex(Math.max(0, demoInstructions.findIndex((instruction) => instruction.position === bundled.current_instruction)));
+        setLoading(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
     let cancelled = false;
     fetch(`/api/projects/${params.id}`)
       .then(async (response) => {
@@ -176,7 +191,7 @@ export default function ReaderPage() {
       <div className="px-5 pt-3">
         <Progress value={pct} className="h-1" />
         <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground">
-          <span>Start</span><span>{saving ? "Syncing…" : "Synced"}</span><span>Done</span>
+          <span>Start</span><span>{project.id === "project-demo" ? "Demo · sign in to save" : saving ? "Syncing…" : "Synced"}</span><span>Done</span>
         </div>
       </div>
       {error && <p className="mx-5 mt-3 rounded-xl bg-red-50 p-2 text-center text-xs font-bold text-red-700">{error}</p>}
@@ -203,28 +218,26 @@ export default function ReaderPage() {
           {instruction.notes && <p className="mt-4 rounded-xl bg-[#ffe6a8]/65 p-3 text-xs font-semibold leading-relaxed"><b>Pattern note:</b> {instruction.notes}</p>}
           {instructionNotes.map((note) => <p key={note.id} className="mt-3 rounded-xl bg-secondary/60 p-3 text-xs font-semibold">Your note: {note.body}</p>)}
           <div className="mt-5 flex flex-wrap gap-2">
-            <button onClick={() => setNoteOpen(true)} className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><NotebookPen className="size-3.5" />Add note</button>
-            <a href={`/api/patterns/${project.pattern_id}/original`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><Eye className="size-3.5" />View original</a>
+            {session.data?.user ? <button onClick={() => setNoteOpen(true)} className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><NotebookPen className="size-3.5" />Add note</button> : <AccountGateButton title="Create an account to add notes" message="Notes are private and stay attached to your saved project step." next={`/projects/${project.id}/reader`} className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><NotebookPen className="size-3.5" />Add note</AccountGateButton>}
+            {project.id === "project-demo" ? <span className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold text-muted-foreground"><Eye className="size-3.5" />Source PDF coming next</span> : <a href={`/api/patterns/${project.pattern_id}/original`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><Eye className="size-3.5" />View original</a>}
           </div>
         </div>
       </div>
       {next && <Peek instruction={next} prefix="Coming up" />}
       <div className="sticky bottom-0 border-t bg-background/95 px-3 py-3 backdrop-blur">
         <div className="flex gap-2">
-          <button onClick={() => move(index - 1)} disabled={!previous || saving} className={cn("flex w-14 items-center justify-center rounded-xl border bg-card", (!previous || saving) && "opacity-40")} aria-label="Previous instruction"><ChevronLeft className="size-5" /></button>
-          <Button onClick={() => next ? move(index + 1) : finish()} disabled={saving} size="lg" className="flex-1">
-            <Check className="mr-2 size-4" strokeWidth={3} />
-            {next
-              ? instruction.optional
-                ? "Skip or complete — continue"
-                : instruction.instruction_kind === "choice"
-                  ? "Chosen — continue"
-                  : `Done — next ${next.instruction_kind}`
-              : "Finish project"}
-            {next && <ChevronRight className="ml-1 size-4" />}
-          </Button>
+          {session.data?.user ? <button onClick={() => move(index - 1)} disabled={!previous || saving} className={cn("flex w-14 items-center justify-center rounded-xl border bg-card", (!previous || saving) && "opacity-40")} aria-label="Previous instruction"><ChevronLeft className="size-5" /></button> : <AccountGateButton title="Create an account to save your place" message="Sign in to keep this step synced and resume it on any device." next={`/projects/${project.id}/reader`} className={cn("flex w-14 items-center justify-center rounded-xl border bg-card", !previous && "pointer-events-none opacity-40")}><ChevronLeft className="size-5" /><span className="sr-only">Previous instruction</span></AccountGateButton>}
+          {session.data?.user ? (
+            <Button onClick={() => next ? move(index + 1) : finish()} disabled={saving} size="lg" className="flex-1">
+              <Check className="mr-2 size-4" strokeWidth={3} />{next ? instruction.optional ? "Skip or complete — continue" : instruction.instruction_kind === "choice" ? "Chosen — continue" : `Done — next ${next.instruction_kind}` : "Finish project"}{next && <ChevronRight className="ml-1 size-4" />}
+            </Button>
+          ) : (
+            <AccountGateButton title={next ? "Create an account to save your place" : "Create an account to complete projects"} message={next ? "Sign in to keep this step synced and resume it on any device." : "Sign in to save completion, progress, and notes to your maker space."} next={`/projects/${project.id}/reader`} className="flex min-h-10 flex-1 items-center justify-center rounded-lg bg-primary px-4 font-heading font-bold text-white">
+              <Check className="mr-2 size-4" strokeWidth={3} />{next ? "Done — save my place" : "Finish project"}{next && <ChevronRight className="ml-1 size-4" />}
+            </AccountGateButton>
+          )}
         </div>
-        <p className="mt-2 text-center text-[10px] text-muted-foreground">Progress saves securely to your account</p>
+        <p className="mt-2 text-center text-[10px] text-muted-foreground">{project.id === "project-demo" ? "Explore freely · create an account when you want to save" : "Progress saves securely to your account"}</p>
       </div>
       <Sheet open={noteOpen} onOpenChange={setNoteOpen}>
         <SheetContent side="bottom" className="rounded-t-3xl">

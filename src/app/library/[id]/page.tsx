@@ -6,6 +6,9 @@ import { useParams } from "next/navigation";
 import { FileText, Play, ShieldCheck } from "lucide-react";
 import { ScreenHeader } from "@/components/screen-header";
 import { PatternCover } from "@/components/pattern-cover";
+import { AccountGateButton } from "@/components/account-gate";
+import { authClient } from "@/lib/auth-client";
+import { demoInstructions, demoPattern } from "@/lib/demo-data";
 import {
   instructionLabel,
   type PatternInstructionRecord,
@@ -27,6 +30,7 @@ type Pattern = {
 
 export default function PatternDetailPage() {
   const params = useParams<{ id: string }>();
+  const session = authClient.useSession();
   const [pattern, setPattern] = useState<Pattern | null>(null);
   const [instructions, setInstructions] = useState<PatternInstructionRecord[]>(
     [],
@@ -35,6 +39,15 @@ export default function PatternDetailPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const bundled = demoPattern(params.id);
+    if (bundled) {
+      const timer = setTimeout(() => {
+        setPattern(bundled);
+        setInstructions(demoInstructions);
+        setLoading(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
     let cancelled = false;
     fetch(`/api/patterns/${params.id}`)
       .then(async (response) => {
@@ -126,25 +139,27 @@ export default function PatternDetailPage() {
             label="Confidence"
             value={uncertain ? `${uncertain} to check` : "Reviewed"}
           />
-          <Stat label="File" value="Private" />
+          <Stat label="File" value={pattern.id === "pattern-demo" ? "Demo" : "Private"} />
         </div>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Link
-            href={`/projects/new?pattern=${pattern.id}`}
-            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 font-heading text-sm font-extrabold text-white"
-          >
-            <Play className="size-4" />
-            Start a project
-          </Link>
-          <a
-            href={`/api/patterns/${pattern.id}/original`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border bg-white px-5 py-4 font-heading text-sm font-extrabold"
-          >
-            <FileText className="size-4" />
-            Open original PDF
-          </a>
+          {session.data?.user ? (
+            <Link href={`/projects/new?pattern=${pattern.id}`} className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 font-heading text-sm font-extrabold text-white">
+              <Play className="size-4" />Start a project
+            </Link>
+          ) : (
+            <AccountGateButton title="Create an account to start a project" message="Projects save your yarn, notes, and place in the pattern across devices." next={`/projects/new?pattern=${pattern.id}`} className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 font-heading text-sm font-extrabold text-white">
+              <Play className="size-4" />Start a project
+            </AccountGateButton>
+          )}
+          {pattern.id === "pattern-demo" ? (
+            <button disabled className="flex flex-1 items-center justify-center gap-2 rounded-2xl border bg-white px-5 py-4 font-heading text-sm font-extrabold opacity-60">
+              <FileText className="size-4" />Demo PDF coming next
+            </button>
+          ) : (
+            <a href={`/api/patterns/${pattern.id}/original`} target="_blank" rel="noreferrer" className="flex flex-1 items-center justify-center gap-2 rounded-2xl border bg-white px-5 py-4 font-heading text-sm font-extrabold">
+              <FileText className="size-4" />Open original PDF
+            </a>
+          )}
         </div>
 
         <section className="mt-8">
@@ -185,10 +200,9 @@ export default function PatternDetailPage() {
         <div className="mt-7 flex items-start gap-3 rounded-2xl bg-[#17324d] p-4 text-white">
           <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[#59c3eb]" />
           <div>
-            <p className="text-sm font-extrabold">Private to your account</p>
+            <p className="text-sm font-extrabold">{pattern.id === "pattern-demo" ? "Safe to explore" : "Private to your account"}</p>
             <p className="mt-1 text-xs leading-relaxed text-white/65">
-              The original is streamed through Stitchly only after ownership is
-              checked. Its Blob URL is never public.
+              {pattern.id === "pattern-demo" ? "This bundled example is separate from private account data. Sign in only when you want to save or upload." : "The original is streamed through Stitchly only after ownership is checked. Its Blob URL is never public."}
             </p>
           </div>
         </div>

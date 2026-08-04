@@ -8,6 +8,8 @@ import { CraftArt } from "@/components/craft-art";
 import { PatternCover } from "@/components/pattern-cover";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { demoPatterns } from "@/lib/demo-data";
+import { AccountGateButton } from "@/components/account-gate";
 
 type Pattern = {
   id: string;
@@ -30,7 +32,10 @@ export default function LibraryPage() {
   useEffect(() => {
     if (session.isPending) return;
     if (!session.data?.user) {
-      const timer = setTimeout(() => setLoading(false), 0);
+      const timer = setTimeout(() => {
+        setPatterns(demoPatterns);
+        setLoading(false);
+      }, 0);
       return () => clearTimeout(timer);
     }
     let cancelled = false;
@@ -74,18 +79,20 @@ export default function LibraryPage() {
       <ScreenHeader
         title="Your pattern library"
         right={
-          <Link
-            href="/library/upload"
-            className="flex size-10 items-center justify-center rounded-2xl bg-primary text-white shadow-md shadow-primary/20"
-          >
-            <Plus className="size-5" />
-          </Link>
+          session.data?.user ? (
+            <Link href="/library/upload" className="flex size-10 items-center justify-center rounded-2xl bg-primary text-white shadow-md shadow-primary/20" aria-label="Import a pattern">
+              <Plus className="size-5" />
+            </Link>
+          ) : (
+            <AccountGateButton title="Create an account to import a pattern" message="Your PDF and its extracted instructions stay private and need an account owner." next="/library/upload" className="flex size-10 items-center justify-center rounded-2xl bg-primary text-white shadow-md shadow-primary/20" >
+              <Plus className="size-5" />
+              <span className="sr-only">Import a pattern</span>
+            </AccountGateButton>
+          )
         }
       />
       <div className="px-5 pt-5 md:px-8">
-        {!session.isPending && !session.data?.user ? (
-          <SignInState />
-        ) : loading ? (
+        {loading ? (
           <p className="py-20 text-center text-sm font-bold text-muted-foreground">
             Loading your private library…
           </p>
@@ -173,25 +180,6 @@ export default function LibraryPage() {
           </>
         )}
       </div>
-    </div>
-  );
-}
-function SignInState() {
-  return (
-    <div className="py-14 text-center">
-      <CraftArt art="basket" className="mx-auto size-52" />
-      <h1 className="font-heading mt-4 text-3xl font-black">
-        Your private library awaits
-      </h1>
-      <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-        Sign in to see PDFs and projects stored against your account.
-      </p>
-      <Link
-        href="/sign-in"
-        className="mt-6 inline-flex rounded-2xl bg-primary px-6 py-3.5 text-sm font-extrabold text-white"
-      >
-        Sign in
-      </Link>
     </div>
   );
 }

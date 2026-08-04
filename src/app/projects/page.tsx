@@ -8,6 +8,7 @@ import { PatternArt, CraftArt } from "@/components/craft-art";
 import { PatternCover } from "@/components/pattern-cover";
 import { Progress } from "@/components/ui/progress";
 import { authClient } from "@/lib/auth-client";
+import { demoProjects } from "@/lib/demo-data";
 type Project = {
   id: string;
   name: string;
@@ -28,7 +29,10 @@ export default function ProjectsPage() {
   useEffect(() => {
     if (session.isPending) return;
     if (!session.data?.user) {
-      const timer = setTimeout(() => setLoading(false), 0);
+      const timer = setTimeout(() => {
+        setProjects(demoProjects);
+        setLoading(false);
+      }, 0);
       return () => clearTimeout(timer);
     }
     let cancelled = false;
@@ -74,9 +78,7 @@ export default function ProjectsPage() {
         }
       />
       <div className="px-5 pt-7 md:px-8">
-        {!session.isPending && !session.data?.user ? (
-          <SignInProjects />
-        ) : loading ? (
+        {loading ? (
           <p className="py-20 text-center text-sm font-bold text-muted-foreground">
             Loading projects…
           </p>
@@ -187,22 +189,6 @@ export default function ProjectsPage() {
           </>
         )}
       </div>
-    </div>
-  );
-}
-function SignInProjects() {
-  return (
-    <div className="py-14 text-center">
-      <CraftArt art="yarn" className="mx-auto size-48" />
-      <h1 className="font-heading mt-4 text-3xl font-black">
-        Sign in to see your projects
-      </h1>
-      <Link
-        href="/sign-in"
-        className="mt-6 inline-flex rounded-2xl bg-primary px-6 py-3.5 text-sm font-extrabold text-white"
-      >
-        Sign in
-      </Link>
     </div>
   );
 }

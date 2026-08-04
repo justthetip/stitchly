@@ -7,6 +7,7 @@ import { CraftArt } from "@/components/craft-art";
 import { PatternCover } from "@/components/pattern-cover";
 import { Progress } from "@/components/ui/progress";
 import { authClient } from "@/lib/auth-client";
+import { demoProjects } from "@/lib/demo-data";
 type Project = {
   id: string;
   name: string;
@@ -24,7 +25,10 @@ export default function HomePage() {
   useEffect(() => {
     if (session.isPending) return;
     if (!session.data?.user) {
-      const timer = setTimeout(() => setLoaded(true), 0);
+      const timer = setTimeout(() => {
+        setProjects(demoProjects);
+        setLoaded(true);
+      }, 0);
       return () => clearTimeout(timer);
     }
     let cancelled = false;
