@@ -317,11 +317,12 @@ import XCTest
         XCTAssertTrue(app.descendants(matching: .any)["review-confidence-1"].exists)
         let instruction = app.descendants(matching: .any)["review-instruction-1"]
         XCTAssertTrue(instruction.exists)
+        app.swipeUp()
         for _ in 0..<3 where !instruction.isHittable { app.swipeUp() }
         XCTAssertTrue(instruction.isHittable)
         instruction.tap()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2))
         instruction.typeText(" Checked")
+        XCTAssertTrue(String(describing: instruction.value).contains("Checked"))
         app.buttons["save-import-review"].tap()
         XCTAssertTrue(app.staticTexts["Pattern ready"].waitForExistence(timeout: 3))
         app.buttons["Done"].tap()
