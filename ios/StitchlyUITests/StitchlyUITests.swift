@@ -14,6 +14,12 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Used the coral marker at the side seam."].exists)
         app.buttons["continue-project"].tap()
         XCTAssertTrue(app.staticTexts["Row 1"].waitForExistence(timeout: 3))
+        let sectionSwitcher = app.buttons["reader-section-switcher"]
+        XCTAssertTrue(sectionSwitcher.isHittable)
+        XCTAssertTrue(sectionSwitcher.label.contains("Back panel"))
+        sectionSwitcher.tap()
+        XCTAssertTrue(app.navigationBars["Pattern sections"].waitForExistence(timeout: 3))
+        app.buttons["Close sections"].tap()
         XCTAssertTrue(app.buttons["reader-actions"].exists)
         XCTAssertTrue(app.buttons["Next"].isHittable)
         app.buttons["Next"].tap()

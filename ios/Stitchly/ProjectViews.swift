@@ -350,22 +350,7 @@ struct ReaderView: View {
         ZStack {
             LinearGradient(colors: [.cream.opacity(0.65), .white], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    AuthenticatedCoverImage(path: project.coverUrl, fallbackAsset: "ProjectFallback")
-                        .frame(width: 46, height: 46)
-                    Text(current?.section ?? project.patternName ?? "Pattern")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.ink)
-                        .lineLimit(2)
-                    Spacer()
-                    Text("Step \(currentStepIndex + 1) of \(max(steps.count, 1))")
-                        .font(.subheadline.bold())
-                        .monospacedDigit()
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.white, in: .capsule)
-                }.padding()
+                readerHeader.padding()
                 ProgressView(value: Double(currentStepIndex + 1), total: Double(max(steps.count, 1))).tint(.brandOrange).padding(.horizontal).accessibilityHidden(true)
                 if isLoading {
                     LoadingStateView(title: "Opening your project", message: "Loading pattern sections, your current step, and saved notes.")
@@ -437,6 +422,65 @@ struct ReaderView: View {
                 else if isSavingProgress { LoadingBanner(message: "Saving your place at step \(position)…").padding(.top, 8) }
             }
             .alert("Couldn’t update your project", isPresented: .init(get: { readerError != nil }, set: { if !$0 { readerError = nil } })) { Button("OK") {} } message: { Text(readerError ?? "") }
+    }
+    @ViewBuilder private var readerHeader: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    readerArtwork
+                    Spacer()
+                    readerStepBadge
+                }
+                sectionSwitcher
+            }
+        } else {
+            HStack(spacing: 12) {
+                readerArtwork
+                sectionSwitcher
+                Spacer(minLength: 0)
+                readerStepBadge
+            }
+        }
+    }
+    private var readerArtwork: some View {
+        AuthenticatedCoverImage(path: project.coverUrl, fallbackAsset: "ProjectFallback")
+            .frame(width: 46, height: 46)
+    }
+    private var sectionSwitcher: some View {
+        Button { showSections = true } label: {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("SECTION")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Color.ink)
+                    Text(current?.section ?? project.patternName ?? "Pattern")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.ink)
+                        .lineLimit(2)
+                }
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.brandOrange)
+            }
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white, in: .rect(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .disabled(isLoading || instructions.patternSections.isEmpty)
+        .accessibilityLabel("Current section, \(current?.section ?? project.patternName ?? "Pattern")")
+        .accessibilityHint("Shows all pattern sections")
+        .accessibilityIdentifier("reader-section-switcher")
+    }
+    private var readerStepBadge: some View {
+        Text("Step \(currentStepIndex + 1) of \(max(steps.count, 1))")
+            .font(.subheadline.bold())
+            .monospacedDigit()
+            .foregroundStyle(.black)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.white, in: .capsule)
     }
     @ViewBuilder private var readerControls: some View {
         if dynamicTypeSize.isAccessibilitySize {
