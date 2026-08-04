@@ -76,3 +76,38 @@ For each candidate record:
 - selected App Store build, if the version is editable;
 - current App Store review state;
 - corresponding Linear comments/status update.
+
+## Production launch and monitoring
+
+Before acting on an approval notification, re-query the App Store version, review submission, selected build, and release type. For an `AFTER_APPROVAL` version, record the first authoritative `READY_FOR_DISTRIBUTION`/`READY_FOR_SALE` transition as the release time; there is no separate scheduled release date. Verify the public listing and install button independently rather than treating the review state as proof of availability.
+
+Run the production smoke test from a clean public App Store installation on a non-development physical device. Record the app version/build and device/iOS version, then verify:
+
+1. email/password sign-in and Sign in with Apple reach the same owner-scoped account experience;
+2. the example pattern or a permitted test PDF imports, review edits save, a representative cover appears, and the authenticated original PDF opens;
+3. a project can be created, resumed from Home, switched between sections, advanced through a grouped repeat, noted, and completed;
+4. revisiting Home, Library, Projects, and cover images uses the cached state without stale cross-account data;
+5. sign-out removes private cached data and returns to native authentication.
+
+Check launch health at release, +1 hour, +24 hours, and +72 hours:
+
+- App Store Connect availability, crash/diagnostic reports, ratings, and reviews;
+- support mail sent to `support@stitchly.app` and the public support page;
+- Vercel function failures/latency and Neon health;
+- privacy-safe `native_telemetry_events` aggregates by build number, event name, and time bucket: app opens; PDF import started/completed conversion; projects created; readers opened/progressed; reader completions; and MetricKit diagnostic payload/crash counts.
+
+Never include owner IDs, pattern text, filenames, notes, credentials, or raw user content in a launch report. Compare counts and rates, and distinguish “no telemetry received” from a genuine zero.
+
+## Rollback and urgent fixes
+
+iOS does not support replacing an already released binary with an older build. Pausing a phased release (when one exists) or removing the app from sale are the rollback controls, and either requires an explicit release-owner decision after impact is confirmed.
+
+For a severe production defect:
+
+1. capture the symptom, affected app/build, timestamps, scope, and reproduction in a linked urgent Linear issue without copying private user content;
+2. decide whether support guidance is sufficient or the release owner must pause/remove the app from sale;
+3. branch from the released commit, apply only the verified fix, bump the marketing version to `1.0.1` (or the next editable patch version) and use a new build number;
+4. run the complete native/web release gate, re-check signing/privacy/export declarations, and distribute an internal TestFlight smoke candidate before App Review submission;
+5. never attach a follow-up TestFlight build to a locked review/version relationship or cancel an active submission without explicit user direction.
+
+If Apple rejects a pre-release submission, preserve the exact rejection text and resolution-center context in Linear before changing code, metadata, or the selected build.
