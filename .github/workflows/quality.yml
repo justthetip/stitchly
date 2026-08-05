@@ -22,4 +22,14 @@ jobs:
       - uses: actions/checkout@v4
       - run: brew install xcodegen
       - run: xcodegen generate --spec ios/project.yml
-      - run: xcodebuild -project ios/Stitchly.xcodeproj -scheme Stitchly -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17 Pro' CODE_SIGNING_ALLOWED=NO build test
+      - name: Create an available iOS simulator
+        id: simulator
+        shell: bash
+        run: |
+          runtime_id="$(xcrun simctl list runtimes available -j | ruby -rjson -e 'r=JSON.parse(STDIN.read).fetch("runtimes").select { |item| item["isAvailable"] && item["identifier"].include?("iOS") }.max_by { |item| item.fetch("version").split(".").map(&:to_i) }; abort "No available iOS runtime" unless r; print r.fetch("identifier")')"
+          device_type_id="$(xcrun simctl list devicetypes -j | ruby -rjson -e 'types=JSON.parse(STDIN.read).fetch("devicetypes").select { |item| item.fetch("name").start_with?("iPhone") }; type=types.find { |item| item.fetch("name") == "iPhone 17 Pro" } || types.last; abort "No iPhone device type" unless type; print type.fetch("identifier")')"
+          simulator_id="$(xcrun simctl create 'Stitchly CI' "$device_type_id" "$runtime_id")"
+          xcrun simctl boot "$simulator_id"
+          xcrun simctl bootstatus "$simulator_id" -b
+          echo "id=$simulator_id" >> "$GITHUB_OUTPUT"
+      - run: xcodebuild -project ios/Stitchly.xcodeproj -scheme Stitchly -sdk iphonesimulator -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}' CODE_SIGNING_ALLOWED=NO build test
