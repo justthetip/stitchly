@@ -7,9 +7,16 @@ import StoreKit
     @Published var isLoading = false
     @Published var isRefreshing = false
     @Published var error: String?
+    private var loadedIdentity: String?
 
     func load(client: APIClient, userID: String?, forceRefresh: Bool = false) async {
         error = nil
+        let identity = userID == nil || client.token == "demo" ? "guest" : userID!
+        if loadedIdentity != identity {
+            activeProject = nil
+            sourceLabel = nil
+            loadedIdentity = identity
+        }
         if userID == nil || client.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
@@ -44,7 +51,7 @@ import StoreKit
 struct HomeView: View {
     @EnvironmentObject private var auth: AuthManager
     @StateObject private var store = HomeStore()
-    let showProjects: () -> Void
+    let showLibrary: () -> Void
 
     var body: some View {
         NavigationStack {
@@ -95,7 +102,8 @@ struct HomeView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 22) {
-                            ActionableEmptyState(icon: "square.stack.3d.up", title: "Choose what to make next", message: "Start a project from a pattern in your library, then resume it here anytime.", actionTitle: "View projects", actionIcon: "square.stack.3d.up", isDisabled: store.isLoading, action: showProjects)
+                            HomeFeatureStrip()
+                            ActionableEmptyState(icon: "doc.badge.plus", title: "Bring in your first pattern", message: "Import a pattern PDF and Stitchly will turn its instructions into clear steps that remember your place.", actionTitle: "Import a pattern", actionIcon: "doc.badge.plus", isDisabled: store.isLoading, action: showLibrary)
                                 .frame(minHeight: 330)
                         }
                         .padding()
@@ -106,7 +114,7 @@ struct HomeView: View {
             .navigationDestination(for: Project.self) { project in
                 ReaderView(project: project) { Task { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) } }
             }
-            .task { await store.load(client: auth.client, userID: auth.user?.id) }
+            .task(id: auth.contentIdentity) { await store.load(client: auth.client, userID: auth.user?.id) }
             .refreshable { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) }
             .alert("Couldn’t load Home", isPresented: .init(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("Try again") { Task { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) } } } message: { Text(store.error ?? "") }
         }
@@ -114,11 +122,29 @@ struct HomeView: View {
 }
 
 private struct HomeFeatureStrip: View {
+    private struct Feature: Identifiable {
+        let id: Int
+        let image: String
+        let eyebrow: String
+        let title: String
+        let message: String
+        let color: Color
+    }
+
     private let features = [
-        ("OnboardingBringPatterns", "Quick PDF import"),
-        ("OnboardingClearSteps", "Consistent steps"),
-        ("OnboardingKeepPlace", "Keep your place"),
+        Feature(id: 0, image: "OnboardingBringPatterns", eyebrow: "Import in moments", title: "PDF to clear steps", message: "Quickly turn a pattern PDF into one consistent, trackable format.", color: .brandBlue),
+        Feature(id: 1, image: "OnboardingClearSteps", eyebrow: "Follow clear steps", title: "Focus on making", message: "Work through one instruction at a time instead of scanning the PDF.", color: .brandOrange),
+        Feature(id: 2, image: "OnboardingKeepPlace", eyebrow: "Never lose your place", title: "Resume right here", message: "Return to the exact step where you stopped, ready to keep making.", color: .brandPink),
     ]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var selection = 0
+
+    private var shouldAutoAdvance: Bool {
+        !reduceMotion && !voiceOverEnabled && scenePhase == .active
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -126,30 +152,71 @@ private struct HomeFeatureStrip: View {
                 .font(.title2.bold())
                 .foregroundStyle(Color.ink)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 10) {
-                ForEach(features, id: \.0) { feature in
-                    VStack(spacing: 7) {
-                        Image(feature.0)
+            TabView(selection: $selection) {
+                ForEach(features) { feature in
+                    HStack(spacing: 14) {
+                        Image(feature.image)
                             .resizable()
                             .scaledToFill()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 70)
+                            .frame(width: dynamicTypeSize.isAccessibilitySize ? 96 : 124)
+                            .frame(maxHeight: .infinity)
                             .clipped()
-                            .clipShape(.rect(cornerRadius: 14))
+                            .clipShape(.rect(cornerRadius: 18))
                             .accessibilityHidden(true)
-                        Text(feature.1)
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Color.ink)
-                            .multilineTextAlignment(.center)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(feature.eyebrow.uppercased())
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Color.ink.opacity(0.68))
+                            Text(feature.title)
+                                .font(.title3.bold())
+                                .foregroundStyle(Color.ink)
+                            Text(feature.message)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.ink)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxWidth: .infinity, alignment: .top)
+                    .padding(14)
+                    .background(feature.color.opacity(0.22), in: .rect(cornerRadius: 20))
+                    .padding(.horizontal, 2)
+                    .tag(feature.id)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(feature.eyebrow). \(feature.title). \(feature.message)")
+                    .accessibilityValue("Page \(feature.id + 1) of \(features.count)")
+                    .accessibilityIdentifier("home-feature-page-\(feature.id + 1)")
                 }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: dynamicTypeSize.isAccessibilitySize ? 300 : 190)
+            .accessibilityIdentifier("home-value-carousel")
+            HStack(spacing: 8) {
+                ForEach(features) { feature in
+                    Button {
+                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { selection = feature.id }
+                    } label: {
+                        Capsule()
+                            .fill(selection == feature.id ? Color.ink : Color.ink.opacity(0.2))
+                            .frame(width: selection == feature.id ? 24 : 8, height: 8)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Show \(feature.eyebrow)")
+                    .accessibilityValue("Page \(feature.id + 1) of \(features.count)")
+                }
+            }
+            .frame(maxWidth: .infinity)
         }
         .padding(16)
         .background(Color.brandBlue.opacity(0.18), in: .rect(cornerRadius: 22))
         .accessibilityElement(children: .contain)
+        .accessibilityValue("Page \(selection + 1) of \(features.count)")
         .accessibilityIdentifier("home-feature-strip")
+        .task(id: "\(selection)-\(shouldAutoAdvance)") {
+            guard shouldAutoAdvance else { return }
+            try? await Task.sleep(for: .seconds(6))
+            guard !Task.isCancelled, shouldAutoAdvance else { return }
+            withAnimation(.easeInOut(duration: 0.4)) { selection = (selection + 1) % features.count }
+        }
     }
 }
 
@@ -159,10 +226,16 @@ private struct HomeFeatureStrip: View {
     @Published var refreshing = false
     @Published var loadingMessage = "Loading your projects and saved progress…"
     @Published var error: String?
+    private var loadedIdentity: String?
 
     func load(client: APIClient, userID: String?, forceRefresh: Bool = false, message: String = "Loading your projects and saved progress…") async {
         loadingMessage = message
         error = nil
+        let identity = userID == nil || client.token == "demo" ? "guest" : userID!
+        if loadedIdentity != identity {
+            projects = []
+            loadedIdentity = identity
+        }
         if userID == nil || client.token == "demo" {
             loading = true; defer { loading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
@@ -189,11 +262,12 @@ struct ProjectsView: View {
     @State private var deletingProject = false
     @State private var deletionError: String?
     @State private var createdProject: Project?
+    var showLibrary: () -> Void = {}
     var body: some View {
         NavigationStack {
             Group {
                 if store.loading && store.projects.isEmpty { LoadingStateView(title: "Loading your projects", message: store.loadingMessage) }
-                else if store.projects.isEmpty { ActionableEmptyState(icon: "square.stack.3d.up", title: "Start your first project", message: "Choose a pattern, add your yarn, and always return to the right step.", actionTitle: "Create a project", actionIcon: "plus", isDisabled: store.loading || createProject, action: beginCreatingProject) }
+                else if store.projects.isEmpty { ActionableEmptyState(icon: "square.stack.3d.up", title: "No projects on the go", message: "Import a pattern first, then start a project and always return to the right step.", actionTitle: "Choose a pattern", actionIcon: "books.vertical", isDisabled: store.loading || createProject, action: showLibrary) }
                 else {
                     List {
                         let active = store.projects.filter { $0.status != "completed" }
@@ -207,7 +281,7 @@ struct ProjectsView: View {
                 .navigationDestination(for: Project.self) { project in ProjectOverviewView(project: project) { Task { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true, message: "Refreshing projects after your update…") } } }
                 .sheet(isPresented: $createProject) { CreateProjectView { project in createdProject = project; Task { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) } } }
                 .sheet(item: $createdProject) { ProjectCreatedView(project: $0) }
-                .task { await store.load(client: auth.client, userID: auth.user?.id) }.refreshable { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true, message: "Refreshing projects and checking saved progress…") }
+                .task(id: auth.contentIdentity) { await store.load(client: auth.client, userID: auth.user?.id) }.refreshable { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true, message: "Refreshing projects and checking saved progress…") }
                 .overlay(alignment: .top) { if store.loading && !store.projects.isEmpty { LoadingBanner(message: store.loadingMessage).padding(.top, 8) } }
                 .alert("Project wasn’t deleted", isPresented: .init(get: { deletionError != nil }, set: { if !$0 { deletionError = nil } })) { Button("OK") {} } message: { Text(deletionError ?? "") }
                 .confirmationDialog("Delete this project?", isPresented: .init(get: { projectToDelete != nil }, set: { if !$0 { projectToDelete = nil } }), titleVisibility: .visible, presenting: projectToDelete) { project in

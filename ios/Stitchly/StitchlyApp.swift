@@ -357,8 +357,8 @@ struct MainTabs: View {
     @State private var selection = ProcessInfo.processInfo.arguments.contains("-libraryDemo") ? 2 : (ProcessInfo.processInfo.arguments.contains("-projectsDemo") ? 1 : 0)
     var body: some View {
         TabView(selection: $selection) {
-            Tab("Home", systemImage: "house.fill", value: 0) { HomeView { selection = 1 } }
-            Tab("Projects", systemImage: "square.stack.3d.up.fill", value: 1) { ProjectsView() }
+            Tab("Home", systemImage: "house.fill", value: 0) { HomeView { selection = 2 } }
+            Tab("Projects", systemImage: "square.stack.3d.up.fill", value: 1) { ProjectsView { selection = 2 } }
             Tab("Library", systemImage: "books.vertical.fill", value: 2) { LibraryView() }
             Tab("Account", systemImage: "person.crop.circle.fill", value: 3) { AccountView() }
         }

@@ -33,6 +33,8 @@ struct AuthenticationRequest: Identifiable, Equatable {
 
     var client: APIClient { APIClient(token: token) }
     var isGuest: Bool { user == nil }
+    var usesGuestDemo: Bool { isGuest || token == "demo" }
+    var contentIdentity: String { usesGuestDemo ? "guest" : (user?.id ?? "guest") }
 
     func requireAuthentication(title: String, message: String) {
         guard isGuest, authenticationRequest == nil else { return }

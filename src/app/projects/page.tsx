@@ -8,6 +8,7 @@ import { PatternArt, CraftArt } from "@/components/craft-art";
 import { PatternCover } from "@/components/pattern-cover";
 import { Progress } from "@/components/ui/progress";
 import { authClient } from "@/lib/auth-client";
+import { contentMatchesSession } from "@/lib/content-identity";
 import { demoProject, demoProjects, isDemoProject } from "@/lib/demo-data";
 type Project = {
   id: string;
@@ -26,12 +27,14 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [loadedIdentity, setLoadedIdentity] = useState<string | null>(null);
   useEffect(() => {
     if (session.isPending) return;
     if (!session.data?.user) {
       const timer = setTimeout(() => {
         setProjects(demoProjects.map((project) => demoProject(project.id) ?? project));
         setLoading(false);
+        setLoadedIdentity("guest");
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -44,6 +47,7 @@ export default function ProjectsPage() {
         if (!cancelled) {
           setProjects(payload.projects);
           setLoading(false);
+          setLoadedIdentity(session.data?.user?.id ?? null);
         }
       })
       .catch((reason) => {
@@ -54,6 +58,7 @@ export default function ProjectsPage() {
               : "Could not load projects",
           );
           setLoading(false);
+          setLoadedIdentity(session.data?.user?.id ?? null);
         }
       });
     return () => {
@@ -63,6 +68,11 @@ export default function ProjectsPage() {
   const active = projects.filter((project) => project.status !== "completed");
   const completed = projects.filter(
     (project) => project.status === "completed",
+  );
+  const contentReady = contentMatchesSession(
+    loadedIdentity,
+    session.data?.user?.id,
+    session.isPending,
   );
   return (
     <div className="pb-10">
@@ -78,7 +88,7 @@ export default function ProjectsPage() {
         }
       />
       <div className="px-5 pt-7 md:px-8">
-        {loading ? (
+        {!contentReady || loading ? (
           <p className="py-20 text-center text-sm font-bold text-muted-foreground">
             Loading projects…
           </p>

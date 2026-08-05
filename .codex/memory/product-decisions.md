@@ -9,6 +9,8 @@
 - Patterns need a complete native overview grouped into source-order sections; alphabetical section sorting is incorrect.
 - The focused reader must let a maker jump directly between sections and persist the selected position.
 - Guests can advance, go back, and jump between sections in the bundled demo project without authenticating. Save that demo reader position only on the device; cloud sync, notes, project completion, and private project creation remain account actions.
+- Bundled demo patterns and the demo project are guest-only. Once authentication succeeds, Home, Library, Projects, counts, search, and resume surfaces show only owner-scoped data; a new or empty account sees import/project empty-state calls to action. Signing out restores the guest demo without merging its local progress into the account.
+- Home explains the three primary benefits with a horizontally page-able carousel: quick PDF conversion into Stitchly's consistent format first, focused steps second, and saved place third. Automatic paging pauses for Reduce Motion, VoiceOver, inactive app/browser state, focus, and direct interaction.
 - Original PDF terminology and labels matter. Do not normalize away meaningful row, round, setup, finishing, size, or section labels.
 
 ## Visual system

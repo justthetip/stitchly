@@ -25,9 +25,15 @@ enum PatternLibraryFiltering {
     @Published var isRefreshing = false
     @Published var loadingMessage = "Loading your pattern library…"
     @Published var error: String?
+    private var loadedIdentity: String?
     func load(client: APIClient, userID: String?, forceRefresh: Bool = false, message: String = "Loading your pattern library…") async {
         loadingMessage = message
         error = nil
+        let identity = userID == nil || client.token == "demo" ? "guest" : userID!
+        if loadedIdentity != identity {
+            patterns = []
+            loadedIdentity = identity
+        }
         if userID == nil || client.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
@@ -67,7 +73,7 @@ struct LibraryView: View {
         NavigationStack {
             Group {
                 if store.isLoading && store.patterns.isEmpty { LoadingStateView(title: "Loading your library", message: store.loadingMessage) }
-                else if store.patterns.isEmpty { ActionableEmptyState(icon: "sparkles.rectangle.stack", title: "Try your first pattern", message: "Use Stitchly’s optional starter headband, or import a PDF of your own. Both open in review before they join your private library.", actionTitle: "Try an example pattern", actionIcon: "sparkles", isDisabled: store.isLoading || importing || addingExample, action: { Task { await addExample() } }, secondaryActionTitle: "Import my PDF", secondaryActionIcon: "doc.badge.plus", secondaryAction: beginImport) }
+                else if store.patterns.isEmpty { ActionableEmptyState(icon: "doc.badge.plus", title: "Bring in your first pattern", message: "Import a PDF and Stitchly will turn its actual instructions into clear steps for review.", actionTitle: "Import a PDF", actionIcon: "doc.badge.plus", isDisabled: store.isLoading || importing, action: beginImport) }
                 else {
                     VStack(spacing: 0) {
                         Picker("Craft", selection: $craftFilter) {
@@ -117,7 +123,7 @@ struct LibraryView: View {
             }
             .sheet(item: $readyPattern) { pattern in PatternReadyView(pattern: pattern) { project in readyPattern = nil; createdProject = project } }
             .sheet(item: $createdProject) { ProjectCreatedView(project: $0) }
-            .task { await store.load(client: auth.client, userID: auth.user?.id); if ProcessInfo.processInfo.arguments.contains("-importReviewDemo") { reviewResponse = PatternResponse(pattern: DemoData.pattern, instructions: DemoData.instructions) } }
+            .task(id: auth.contentIdentity) { await store.load(client: auth.client, userID: auth.user?.id); if ProcessInfo.processInfo.arguments.contains("-importReviewDemo") { reviewResponse = PatternResponse(pattern: DemoData.pattern, instructions: DemoData.instructions) } }
             .refreshable { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) }
             .alert("Couldn’t load library", isPresented: .init(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("Try again") { Task { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) } } } message: { Text(store.error ?? "") }
             .alert("Pattern wasn’t deleted", isPresented: .init(get: { deletionError != nil }, set: { if !$0 { deletionError = nil } })) { Button("OK") {} } message: { Text(deletionError ?? "") }

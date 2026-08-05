@@ -41,6 +41,48 @@ struct StitchlyTests {
         #expect(PatternLibraryFiltering.apply(patterns, searchText: "", craft: .all).count == 2)
     }
 
+    @MainActor @Test func authenticationSwapRemovesDemoContentAndSignOutRestoresIt() async {
+        let userID = "empty-maker-\(UUID().uuidString)"
+        let emptyClient = APIClient(token: "authenticated-test") { request in
+            let path = request.url?.path ?? ""
+            let data: Data
+            if path == "/api/patterns" {
+                data = try JSONEncoder().encode(PatternListResponse(patterns: []))
+            } else if path == "/api/projects" {
+                data = try JSONEncoder().encode(ProjectListResponse(projects: []))
+            } else {
+                Issue.record("Unexpected empty-account request: \(path)")
+                data = Data("{}".utf8)
+            }
+            return (data, HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+        }
+
+        let home = HomeStore()
+        let library = LibraryStore()
+        let projects = ProjectsStore()
+
+        await home.load(client: APIClient(token: "demo"), userID: nil)
+        await library.load(client: APIClient(token: "demo"), userID: nil)
+        await projects.load(client: APIClient(token: "demo"), userID: nil)
+        #expect(home.activeProject?.id == DemoData.project.id)
+        #expect(library.patterns.count == DemoData.patterns.count)
+        #expect(projects.projects.map(\.id) == [DemoData.project.id])
+
+        await home.load(client: emptyClient, userID: userID)
+        await library.load(client: emptyClient, userID: userID)
+        await projects.load(client: emptyClient, userID: userID)
+        #expect(home.activeProject == nil)
+        #expect(library.patterns.isEmpty)
+        #expect(projects.projects.isEmpty)
+
+        await home.load(client: APIClient(token: "demo"), userID: nil)
+        await library.load(client: APIClient(token: "demo"), userID: nil)
+        await projects.load(client: APIClient(token: "demo"), userID: nil)
+        #expect(home.activeProject?.id == DemoData.project.id)
+        #expect(library.patterns.count == DemoData.patterns.count)
+        #expect(projects.projects.map(\.id) == [DemoData.project.id])
+    }
+
     @Test func reviewPromptIsClaimedOnlyForTheFirstProjectAndOnlyOnce() {
         let suiteName = "ReviewPromptPolicyTests-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

@@ -257,51 +257,38 @@ import XCTest
         let app = XCUIApplication()
         app.launchArguments = ["-demo", "-projectsDemo", "-emptyProjectsDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["Start your first project"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["No projects on the go"].waitForExistence(timeout: 5))
         let action = app.buttons["empty-state-primary-action"]
         XCTAssertTrue(action.isHittable)
+        XCTAssertEqual(action.label, "Choose a pattern")
         action.tap()
-        XCTAssertTrue(app.navigationBars["New project"].waitForExistence(timeout: 3))
-        XCTAssertEqual(app.navigationBars.matching(identifier: "New project").count, 1)
+        XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 3))
     }
 
     func testLibraryEmptyStateShowsProminentImportAction() {
         let app = XCUIApplication()
         app.launchArguments = ["-demo", "-libraryDemo", "-emptyLibraryDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["Try your first pattern"].waitForExistence(timeout: 5))
-        let example = app.buttons["empty-state-primary-action"]
-        let importer = app.buttons["empty-state-secondary-action"]
-        XCTAssertTrue(example.isHittable)
-        XCTAssertEqual(example.label, "Try an example pattern")
+        XCTAssertTrue(app.staticTexts["Bring in your first pattern"].waitForExistence(timeout: 5))
+        let importer = app.buttons["empty-state-primary-action"]
         XCTAssertTrue(importer.isHittable)
-        XCTAssertEqual(importer.label, "Import my PDF")
+        XCTAssertEqual(importer.label, "Import a PDF")
+        XCTAssertFalse(app.buttons["empty-state-secondary-action"].exists)
         importer.tap()
         XCTAssertTrue(app.navigationBars["Import a pattern"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["PDF to pocket-sized steps"].exists)
         XCTAssertTrue(app.buttons["choose-private-pdf"].isHittable)
     }
 
-    func testEmptyLibraryCanTryExampleAndReviewIt() {
+    func testEmptyAuthenticatedLibraryDoesNotOfferDemoContent() {
         let app = XCUIApplication()
         app.launchArguments = ["-demo", "-libraryDemo", "-emptyLibraryDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["Try your first pattern"].waitForExistence(timeout: 5))
-        app.buttons["empty-state-primary-action"].tap()
-        XCTAssertTrue(app.navigationBars["Review import"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Confidence is a prompt to verify—not a guarantee. Preserve the PDF’s own row, round, setup, finishing, and size terminology."].exists)
-        XCTAssertTrue(app.buttons["review-original-pdf"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["review-instruction-1"].exists)
-        app.buttons["save-import-review"].tap()
-        XCTAssertTrue(app.staticTexts["Pattern ready"].waitForExistence(timeout: 3))
-        app.buttons["Review pattern"].tap()
-        XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["pattern-original-pdf"].exists)
-        app.buttons["start-pattern-project"].tap()
-        XCTAssertTrue(app.navigationBars["New project"].waitForExistence(timeout: 3))
-        app.buttons["Create"].tap()
-        XCTAssertTrue(app.staticTexts["Project ready"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["created-start-making"].isHittable)
+        XCTAssertTrue(app.staticTexts["Bring in your first pattern"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Fruity Friends"].exists)
+        XCTAssertFalse(app.staticTexts["Mini Whale"].exists)
+        XCTAssertFalse(app.staticTexts["How to Crochet the Perfect Granny Square"].exists)
+        XCTAssertFalse(app.buttons["Try an example pattern"].exists)
     }
 
     func testHomeResumesCurrentProjectInOneAction() {
@@ -310,11 +297,30 @@ import XCTest
         app.launch()
         XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["home-feature-strip"].exists)
+        XCTAssertTrue(app.staticTexts["PDF to clear steps"].exists)
         XCTAssertTrue(app.staticTexts["DEMO PROJECT"].exists)
         XCTAssertTrue(app.staticTexts["My Fruity Friends"].exists)
         XCTAssertTrue(app.staticTexts["Row 11"].exists)
         app.buttons["resume-current-project"].tap()
         XCTAssertTrue(app.staticTexts["Row 11"].waitForExistence(timeout: 5))
+    }
+
+    func testHomeValueCarouselAdvancesAndSupportsDirectPaging() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-demo", "-skipFirstLaunchSplashForUITests"]
+        app.launch()
+        let carousel = app.descendants(matching: .any)["home-feature-strip"]
+        XCTAssertTrue(carousel.waitForExistence(timeout: 5))
+        let initialValue = carousel.value as? String
+        let advanced = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value != %@", initialValue ?? ""),
+            object: carousel
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [advanced], timeout: 8), .completed)
+        let importPage = app.buttons["Show Import in moments"]
+        XCTAssertTrue(importPage.isHittable)
+        importPage.tap()
+        XCTAssertEqual(carousel.value as? String, "Page 1 of 3")
     }
 
     func testHomeExplainsLoadingCurrentProject() {
@@ -330,9 +336,9 @@ import XCTest
         let app = XCUIApplication()
         app.launchArguments = ["-demo", "-emptyProjectsDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["Choose what to make next"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Bring in your first pattern"].waitForExistence(timeout: 5))
         app.buttons["empty-state-primary-action"].tap()
-        XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 3))
     }
 
     func testProjectOverviewCanCompleteProject() {
@@ -361,7 +367,7 @@ import XCTest
         app.buttons["Delete My Fruity Friends"].tap()
         XCTAssertTrue(app.buttons["Delete My Fruity Friends"].waitForExistence(timeout: 3))
         app.buttons["Delete My Fruity Friends"].tap()
-        XCTAssertTrue(app.staticTexts["Start your first project"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["No projects on the go"].waitForExistence(timeout: 3))
     }
 
     func testPatternCanBeDeletedFromLibrary() {

@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ArrowRight, BookOpen } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, BookmarkCheck, BookOpen, FileUp, ListChecks } from "lucide-react";
 import { CraftArt } from "@/components/craft-art";
 import { PatternCover } from "@/components/pattern-cover";
 import { Progress } from "@/components/ui/progress";
 import { authClient } from "@/lib/auth-client";
+import { contentMatchesSession } from "@/lib/content-identity";
 import { demoProject, demoProjects, isDemoProject } from "@/lib/demo-data";
 type Project = {
   id: string;
@@ -21,13 +22,13 @@ type Project = {
 export default function HomePage() {
   const session = authClient.useSession();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [loadedIdentity, setLoadedIdentity] = useState<string | null>(null);
   useEffect(() => {
     if (session.isPending) return;
     if (!session.data?.user) {
       const timer = setTimeout(() => {
         setProjects(demoProjects.map((project) => demoProject(project.id) ?? project));
-        setLoaded(true);
+        setLoadedIdentity("guest");
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -37,14 +38,21 @@ export default function HomePage() {
       .then((payload) => {
         if (!cancelled) {
           setProjects(payload.projects ?? []);
-          setLoaded(true);
+          setLoadedIdentity(session.data?.user?.id ?? null);
         }
       });
     return () => {
       cancelled = true;
     };
   }, [session.data?.user, session.isPending]);
-  const active = projects.filter((project) => project.status !== "completed");
+  const loaded = contentMatchesSession(
+    loadedIdentity,
+    session.data?.user?.id,
+    session.isPending,
+  );
+  const active = loaded
+    ? projects.filter((project) => project.status !== "completed")
+    : [];
   const current = active[0];
   return (
     <div className="pb-10">
@@ -61,9 +69,6 @@ export default function HomePage() {
             <h1 className="font-heading mt-1 text-3xl font-black">
               What shall we make?
             </h1>
-            <p className="mt-2 max-w-xs text-xs font-extrabold text-[#17324d]/75">
-              Quick PDF import · Consistent steps · Keep your place
-            </p>
           </div>
           <Link
             href="/account"
@@ -74,6 +79,8 @@ export default function HomePage() {
         </div>
       </header>
       <div className="px-5 pt-7 md:px-10">
+        <HomeValueCarousel />
+        <div className="mt-6">
         {!loaded ? (
           <p className="py-20 text-center text-sm font-bold text-muted-foreground">
             Finding your latest instruction…
@@ -83,8 +90,144 @@ export default function HomePage() {
         ) : (
           <EmptyHome signedIn={Boolean(session.data?.user)} />
         )}
+        </div>
       </div>
     </div>
+  );
+}
+
+const homeFeatures = [
+  {
+    title: "Import in moments",
+    message: "Bring in a pattern PDF and quickly turn it into Stitchly’s clear, consistent format.",
+    art: "basket" as const,
+    icon: FileUp,
+    color: "bg-[#dff4fb]",
+  },
+  {
+    title: "Follow clear steps",
+    message: "Focus on one instruction at a time instead of repeatedly scanning the original PDF.",
+    art: "scarf" as const,
+    icon: ListChecks,
+    color: "bg-[#ffe6a8]",
+  },
+  {
+    title: "Never lose your place",
+    message: "Resume from the exact step where you stopped, ready for your next making session.",
+    art: "yarn" as const,
+    icon: BookmarkCheck,
+    color: "bg-[#ffd9df]",
+  },
+];
+
+function HomeValueCarousel() {
+  const [page, setPage] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [pageVisible, setPageVisible] = useState(true);
+  const pointerStart = useRef<number | null>(null);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduceMotion(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const update = () => setPageVisible(document.visibilityState === "visible");
+    update();
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion || paused || !pageVisible) return;
+    const timer = window.setTimeout(
+      () => setPage((current) => (current + 1) % homeFeatures.length),
+      6000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [page, pageVisible, paused, reduceMotion]);
+
+  function finishSwipe(clientX: number) {
+    const start = pointerStart.current;
+    pointerStart.current = null;
+    setPaused(false);
+    if (start == null || Math.abs(clientX - start) < 44) return;
+    setPage((current) =>
+      clientX < start
+        ? (current + 1) % homeFeatures.length
+        : (current - 1 + homeFeatures.length) % homeFeatures.length,
+    );
+  }
+
+  return (
+    <section
+      aria-label="How Stitchly helps"
+      aria-roledescription="carousel"
+      className="overflow-hidden rounded-3xl bg-[#dff4fb]/60 p-4"
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false);
+      }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <p className="px-1 text-xs font-extrabold uppercase tracking-[.15em] text-[#17324d]/60">
+        Your PDF, made easier
+      </p>
+      <div
+        className="mt-3 touch-pan-y overflow-hidden"
+        onPointerDown={(event) => {
+          pointerStart.current = event.clientX;
+          setPaused(true);
+        }}
+        onPointerUp={(event) => finishSwipe(event.clientX)}
+        onPointerCancel={() => {
+          pointerStart.current = null;
+          setPaused(false);
+        }}
+      >
+        <div
+          className="flex transition-transform duration-500 motion-reduce:transition-none"
+          style={{ transform: `translateX(-${page * 100}%)` }}
+        >
+          {homeFeatures.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <article
+                key={feature.title}
+                aria-hidden={page !== index}
+                className={`grid min-w-full items-center gap-4 rounded-2xl p-4 sm:grid-cols-[9rem_1fr] ${feature.color}`}
+              >
+                <CraftArt art={feature.art} className="mx-auto size-32" />
+                <div>
+                  <Icon className="size-5 text-primary" aria-hidden="true" />
+                  <h2 className="font-heading mt-2 text-2xl font-black">{feature.title}</h2>
+                  <p className="mt-2 max-w-lg text-sm font-semibold leading-relaxed text-[#17324d]/75">
+                    {feature.message}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+      <div className="mt-3 flex justify-center gap-2" aria-label={`Page ${page + 1} of ${homeFeatures.length}`}>
+        {homeFeatures.map((feature, index) => (
+          <button
+            key={feature.title}
+            type="button"
+            aria-label={`Show ${feature.title}`}
+            aria-current={page === index ? "true" : undefined}
+            onClick={() => setPage(index)}
+            className={`h-2.5 rounded-full transition-[width,background-color] motion-reduce:transition-none ${page === index ? "w-8 bg-primary" : "w-2.5 bg-[#17324d]/25"}`}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 function ContinueProject({ project }: { project: Project }) {

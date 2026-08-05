@@ -7,6 +7,7 @@ import { ScreenHeader } from "@/components/screen-header";
 import { CraftArt } from "@/components/craft-art";
 import { PatternCover } from "@/components/pattern-cover";
 import { authClient } from "@/lib/auth-client";
+import { contentMatchesSession } from "@/lib/content-identity";
 import { cn } from "@/lib/utils";
 import { demoPatterns } from "@/lib/demo-data";
 import { AccountGateButton } from "@/components/account-gate";
@@ -29,12 +30,14 @@ export default function LibraryPage() {
   const [craft, setCraft] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [loadedIdentity, setLoadedIdentity] = useState<string | null>(null);
   useEffect(() => {
     if (session.isPending) return;
     if (!session.data?.user) {
       const timer = setTimeout(() => {
         setPatterns(demoPatterns);
         setLoading(false);
+        setLoadedIdentity("guest");
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -47,6 +50,7 @@ export default function LibraryPage() {
         if (!cancelled) {
           setPatterns(payload.patterns);
           setLoading(false);
+          setLoadedIdentity(session.data?.user?.id ?? null);
         }
       })
       .catch((reason) => {
@@ -57,6 +61,7 @@ export default function LibraryPage() {
               : "Could not load your patterns",
           );
           setLoading(false);
+          setLoadedIdentity(session.data?.user?.id ?? null);
         }
       });
     return () => {
@@ -73,6 +78,11 @@ export default function LibraryPage() {
             .includes(query.toLowerCase()),
       ),
     [craft, patterns, query],
+  );
+  const contentReady = contentMatchesSession(
+    loadedIdentity,
+    session.data?.user?.id,
+    session.isPending,
   );
   return (
     <div className="pb-8">
@@ -92,7 +102,7 @@ export default function LibraryPage() {
         }
       />
       <div className="px-5 pt-5 md:px-8">
-        {loading ? (
+        {!contentReady || loading ? (
           <p className="py-20 text-center text-sm font-bold text-muted-foreground">
             Loading your private library…
           </p>
