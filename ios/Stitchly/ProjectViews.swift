@@ -435,6 +435,14 @@ struct ReaderView: View {
                 } else { ScrollView {
                     LazyVStack(spacing: 18) {
                         Text(current?.sourceLabel ?? "Step \(position)").font(.title3.weight(.semibold)).foregroundStyle(Color.brandPink)
+                        if let stitchCount = current?.stitchCount {
+                            Label("\(stitchCount) stitches", systemImage: "number")
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(Color.ink)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(Color.white, in: .capsule)
+                        }
                         Button { showStepPhotos = true } label: {
                             Label(stepPhotos.isEmpty ? "Add a private step photo" : "Step photos (\(stepPhotos.count))", systemImage: "camera.fill")
                                 .frame(maxWidth: .infinity)
@@ -471,7 +479,6 @@ struct ReaderView: View {
                                 .accessibilityLabel("Repeat \(repeatCount) times")
                                 .accessibilityIdentifier("reader-repeat-count")
                         }
-                        if let stitchCount = current?.stitchCount { Label("\(stitchCount) stitches", systemImage: "number").font(.headline).foregroundStyle(Color.ink) }
                     }.frame(maxWidth: .infinity).padding(28)
                 }.defaultScrollAnchor(isGuestDemo ? .top : .center) }
                 readerControls.padding()
