@@ -17,3 +17,15 @@ export function saveProgress(projectId: string, value: SavedProgress) {
 export function saveDraftProject(value: { name: string; yarn: string; notes: string; patternId: string }) {
   window.localStorage.setItem("stitchly:last-project", JSON.stringify(value));
 }
+
+export function loadMaterialChecks(projectId: string): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = window.localStorage.getItem(`stitchly:materials:${projectId}`);
+    return saved ? JSON.parse(saved) : [];
+  } catch { return []; }
+}
+
+export function saveMaterialChecks(projectId: string, checked: string[]) {
+  window.localStorage.setItem(`stitchly:materials:${projectId}`, JSON.stringify(checked));
+}

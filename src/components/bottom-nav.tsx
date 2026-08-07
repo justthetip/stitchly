@@ -2,24 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, Layers, Plus, UserRound } from "lucide-react";
+import { BookOpen, Layers, Plus, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { href: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
-  {
-    href: "/library",
-    label: "Library",
-    icon: BookOpen,
-    match: (p: string) => p.startsWith("/library"),
-  },
-  { href: "/account", label: "You", icon: UserRound, match: (p: string) => p.startsWith("/account") },
   {
     href: "/projects",
     label: "Projects",
     icon: Layers,
     match: (p: string) => p.startsWith("/projects"),
   },
+  {
+    href: "/library",
+    label: "Library",
+    icon: BookOpen,
+    match: (p: string) => p.startsWith("/library") && p !== "/library/upload",
+  },
+  { href: "/library/upload", label: "Add", icon: Plus, match: (p: string) => p === "/library/upload", prominent: true },
+  { href: "/account", label: "You", icon: UserRound, match: (p: string) => p.startsWith("/account") },
 ];
 
 export function BottomNav() {
@@ -43,18 +43,17 @@ export function BottomNav() {
                 active ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Icon className="size-5" strokeWidth={active ? 2.2 : 1.8} />
+              {tab.prominent ? (
+                <span className="-mt-10 mb-1 flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background rotate-3">
+                  <Icon className="size-5" strokeWidth={2.5} />
+                </span>
+              ) : (
+                <Icon className="size-5" strokeWidth={active ? 2.2 : 1.8} />
+              )}
               {tab.label}
             </Link>
           );
         })}
-        <Link
-          href="/library/upload"
-          aria-label="Add pattern"
-          className="absolute -top-7 left-1/2 flex size-14 -translate-x-1/2 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background rotate-3"
-        >
-          <Plus className="size-5" strokeWidth={2.5} />
-        </Link>
       </div>
     </nav>
   );

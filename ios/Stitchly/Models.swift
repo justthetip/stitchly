@@ -161,6 +161,15 @@ enum DemoData {
     static let patterns = catalog.patterns
     static let pattern = patterns[0]
     static let project = catalog.project
+    static let completedProject = Project(
+        id: "demo-completed-mini-whale", patternId: "demo-mini-whale", name: "My Mini Whale",
+        status: "completed", yarn: "Worsted weight yarn", currentInstruction: 12,
+        patternName: "Mini Whale", totalInstructions: 12, craft: "crochet",
+        startedAt: Date(timeIntervalSince1970: 1_752_317_200),
+        lastWorkedAt: Date(timeIntervalSince1970: 1_752_858_600),
+        completedAt: Date(timeIntervalSince1970: 1_752_858_600),
+        coverUrl: "/demo/mini-whale-cover.png"
+    )
     static let instructions = instructions(for: pattern.id)
 
     static var projectWithLocalProgress: Project {
@@ -174,6 +183,10 @@ enum DemoData {
             totalInstructions: project.totalInstructions, craft: project.craft, startedAt: project.startedAt,
             lastWorkedAt: project.lastWorkedAt, completedAt: project.completedAt, coverUrl: project.coverUrl
         )
+    }
+
+    static var projectsWithLocalProgress: [Project] {
+        [projectWithLocalProgress, completedProject]
     }
 
     static func instructions(for patternID: String) -> [Instruction] {
@@ -194,7 +207,11 @@ enum DemoData {
     }
 
     static func isDemoProject(_ projectID: String) -> Bool {
-        projectID == project.id
+        projectID == project.id || projectID == completedProject.id
+    }
+
+    static func readerPositionKey(for projectID: String) -> String {
+        projectID == project.id ? "demoReaderPosition" : "demoReaderPosition-\(projectID)"
     }
     static let repeatInstructions = (9...72).map { row in
         Instruction(

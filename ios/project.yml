@@ -7,14 +7,21 @@ settings:
   base:
     DEVELOPMENT_TEAM: GJR42FB3HW
     SWIFT_VERSION: 6.0
-    CURRENT_PROJECT_VERSION: 25
+    CURRENT_PROJECT_VERSION: 26
     MARKETING_VERSION: 1.0
     CODE_SIGN_STYLE: Automatic
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk.git
+    exactVersion: 12.17.0
 targets:
   Stitchly:
     type: application
     platform: iOS
-    sources: [Stitchly]
+    sources:
+      - path: Stitchly
+      - path: GoogleService-Info.plist
+        buildPhase: resources
     info:
       path: Stitchly/Info.plist
       properties:
@@ -24,6 +31,8 @@ targets:
         LSApplicationCategoryType: public.app-category.lifestyle
         ITSAppUsesNonExemptEncryption: false
         UILaunchStoryboardName: LaunchScreen
+        NSCameraUsageDescription: Take private photos of your project at each pattern step.
+        NSPhotoLibraryUsageDescription: Choose a project photo to attach privately to the current pattern step.
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
@@ -34,6 +43,14 @@ targets:
         TARGETED_DEVICE_FAMILY: 1
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: Stitchly/Stitchly.entitlements
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: com.lukejeffproduct.stitchly AppStore
+    dependencies:
+      - package: Firebase
+        product: FirebaseAnalytics
     scheme:
       testTargets: [StitchlyTests, StitchlyUITests]
   StitchlyTests:

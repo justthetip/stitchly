@@ -20,17 +20,22 @@
 		820FE1B939C7A113D272F14F /* mini-whale-cover.png in Resources */ = {isa = PBXBuildFile; fileRef = 13672D6D5535FB8E3CC60B5A /* mini-whale-cover.png */; };
 		93ADAD6FC413C6DB3C89814D /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815A74C9D4BBFC5D122B0928 /* AccountView.swift */; };
 		9B429D4021B14992165E876F /* ReviewPromptPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA911B0FB4FCFA1FCD537052 /* ReviewPromptPolicy.swift */; };
+		9CE72064D3F66E2C63F6DFDB /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 976F344F3163702F8F654873 /* FirebaseAnalytics */; };
 		9D18D04834E28D5F7B6F7204 /* StitchlyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB3E3A95E4217D5578C0845 /* StitchlyUITests.swift */; };
 		A74A1F4F5A2F012B8C0BB35C /* fruity-friends.pdf in Resources */ = {isa = PBXBuildFile; fileRef = EF0640D04CA194D1BC9F91C7 /* fruity-friends.pdf */; };
 		AF383C7039C095AE2DAFD4EC /* perfect-granny-square-cover.png in Resources */ = {isa = PBXBuildFile; fileRef = E9C806807DA09DC4D9A4193A /* perfect-granny-square-cover.png */; };
 		B0FD98BEE87F6EA7F6090F70 /* fruity-friends-cover.png in Resources */ = {isa = PBXBuildFile; fileRef = 852371ACDE8D29643AF63CE8 /* fruity-friends-cover.png */; };
+		B1DFE27F7C18E4943DF74373 /* ProjectPhotoJournal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 727E57A10CDB5D46186D460C /* ProjectPhotoJournal.swift */; };
 		B816DFFA75BE6D3BEA7656E9 /* perfect-granny-square.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 22F907F2B8AD369588E41F97 /* perfect-granny-square.pdf */; };
 		BAF7C2DEF383F1C6B39FD9EB /* LibraryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3636C1FF0E6B76A0E789881 /* LibraryViews.swift */; };
+		BC3F7EF3CBA38BF68DF3ADF6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = AC3B8D4E6557C976D04CDD3A /* GoogleService-Info.plist */; };
 		BCDAAAB1E28B9386A5B06621 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83F84F149B7E2B4A0682623D /* Telemetry.swift */; };
 		BE8B60903D55DFC210A87738 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E0C769A63C577B2B309AD2 /* APIClient.swift */; };
+		BEAFD792437EFC686EA7DAA4 /* PatternGlossary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A2A9754D3328886F9AC713 /* PatternGlossary.swift */; };
 		BFFAC1F8BD3F4DFDAEAC61F6 /* demo-catalog.json in Resources */ = {isa = PBXBuildFile; fileRef = 1392C2470A2AD889669D7FE5 /* demo-catalog.json */; };
 		E57F10F94BAFCC1C429E1253 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF0001CD284F0E186D51EF85 /* OnboardingView.swift */; };
 		E956EED2D8BEB4E1BD75A197 /* ProjectViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */; };
+		EAD9F8F7DB1DE6A434439391 /* ProjectMaterials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D2B54C17927188A7DD5A605 /* ProjectMaterials.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,12 +59,15 @@
 		01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectViews.swift; sourceTree = "<group>"; };
 		13672D6D5535FB8E3CC60B5A /* mini-whale-cover.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "mini-whale-cover.png"; sourceTree = "<group>"; };
 		1392C2470A2AD889669D7FE5 /* demo-catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "demo-catalog.json"; sourceTree = "<group>"; };
+		13A2A9754D3328886F9AC713 /* PatternGlossary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternGlossary.swift; sourceTree = "<group>"; };
 		22F907F2B8AD369588E41F97 /* perfect-granny-square.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "perfect-granny-square.pdf"; sourceTree = "<group>"; };
 		2816538EED2221611A1801B4 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		2DB3E3A95E4217D5578C0845 /* StitchlyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchlyUITests.swift; sourceTree = "<group>"; };
 		4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		5D2B54C17927188A7DD5A605 /* ProjectMaterials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectMaterials.swift; sourceTree = "<group>"; };
 		5F144145528B63171AD36E0E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		68EF58EA17CE4C75A76CA17C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		727E57A10CDB5D46186D460C /* ProjectPhotoJournal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectPhotoJournal.swift; sourceTree = "<group>"; };
 		761106EF997B9870971DA39A /* StitchlyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchlyTests.swift; sourceTree = "<group>"; };
 		806CE3EF509AEF3EBB9E2E3A /* StitchlyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = StitchlyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		815A74C9D4BBFC5D122B0928 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
@@ -68,6 +76,7 @@
 		85F558BCE4AE79FB9A1DDC66 /* OriginalPDFView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalPDFView.swift; sourceTree = "<group>"; };
 		9743005EF2C4DF91DA57169F /* DataCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataCache.swift; sourceTree = "<group>"; };
 		9B5292D329738A085F62B463 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		AC3B8D4E6557C976D04CDD3A /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		B32F63E003499D6CC7AE4A51 /* Stitchly.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Stitchly.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BF2580FCC98BF2993759CA97 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C944A7AFC60449A5D4329DAB /* Stitchly.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Stitchly.entitlements; sourceTree = "<group>"; };
@@ -81,6 +90,17 @@
 		F35B38BE7439864A8B02638C /* StitchlyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchlyApp.swift; sourceTree = "<group>"; };
 		FBF53E8EC80F252B966910FD /* mini-whale.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "mini-whale.pdf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C3A1EDCAF5538F58EDD825F9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9CE72064D3F66E2C63F6DFDB /* FirebaseAnalytics in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		013C52D78951E7B2D1FCABC8 /* Demo */ = {
@@ -100,6 +120,7 @@
 		2C28AB2B8FA36AEA16115D72 = {
 			isa = PBXGroup;
 			children = (
+				AC3B8D4E6557C976D04CDD3A /* GoogleService-Info.plist */,
 				6083FDB89DE9D01D39C595FF /* Stitchly */,
 				D52F38FAB7E7AB000A1DA9E7 /* StitchlyTests */,
 				62A7E4C71355C1D13645BEAD /* StitchlyUITests */,
@@ -121,7 +142,10 @@
 				2816538EED2221611A1801B4 /* Models.swift */,
 				CF0001CD284F0E186D51EF85 /* OnboardingView.swift */,
 				85F558BCE4AE79FB9A1DDC66 /* OriginalPDFView.swift */,
+				13A2A9754D3328886F9AC713 /* PatternGlossary.swift */,
 				4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */,
+				5D2B54C17927188A7DD5A605 /* ProjectMaterials.swift */,
+				727E57A10CDB5D46186D460C /* ProjectPhotoJournal.swift */,
 				01A7EDC7579F9A34F1A7C1FB /* ProjectViews.swift */,
 				CA911B0FB4FCFA1FCD537052 /* ReviewPromptPolicy.swift */,
 				C944A7AFC60449A5D4329DAB /* Stitchly.entitlements */,
@@ -203,6 +227,7 @@
 			buildPhases = (
 				BBC385480094974F90F5D218 /* Sources */,
 				E8A283765F7BB38BFF794B2E /* Resources */,
+				C3A1EDCAF5538F58EDD825F9 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -210,6 +235,7 @@
 			);
 			name = Stitchly;
 			packageProductDependencies = (
+				976F344F3163702F8F654873 /* FirebaseAnalytics */,
 			);
 			productName = Stitchly;
 			productReference = B32F63E003499D6CC7AE4A51 /* Stitchly.app */;
@@ -235,7 +261,6 @@
 					};
 					CFF290397004D774A12DDF76 = {
 						DevelopmentTeam = GJR42FB3HW;
-						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -248,6 +273,9 @@
 			);
 			mainGroup = 2C28AB2B8FA36AEA16115D72;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				973FB1F6350E3A54F25E5628 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 92CBEF13FECAA62D74D115A4 /* Products */;
 			projectDirPath = "";
@@ -266,6 +294,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				49D7B6650ED27275AB1BA9CC /* Assets.xcassets in Resources */,
+				BC3F7EF3CBA38BF68DF3ADF6 /* GoogleService-Info.plist in Resources */,
 				6FC376CE71AA58E992857736 /* LaunchScreen.storyboard in Resources */,
 				463145A1B7737B67AA624168 /* PrivacyInfo.xcprivacy in Resources */,
 				BFFAC1F8BD3F4DFDAEAC61F6 /* demo-catalog.json in Resources */,
@@ -309,6 +338,9 @@
 				7AAECFC44F62BF501A381C43 /* Models.swift in Sources */,
 				E57F10F94BAFCC1C429E1253 /* OnboardingView.swift in Sources */,
 				728E3BC82D2C735FDF02A3F9 /* OriginalPDFView.swift in Sources */,
+				BEAFD792437EFC686EA7DAA4 /* PatternGlossary.swift in Sources */,
+				EAD9F8F7DB1DE6A434439391 /* ProjectMaterials.swift in Sources */,
+				B1DFE27F7C18E4943DF74373 /* ProjectPhotoJournal.swift in Sources */,
 				E956EED2D8BEB4E1BD75A197 /* ProjectViews.swift in Sources */,
 				9B429D4021B14992165E876F /* ReviewPromptPolicy.swift in Sources */,
 				1AD6D4C4287A840B0642360E /* StitchlyApp.swift in Sources */,
@@ -367,7 +399,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 26;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -414,7 +446,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Stitchly/Stitchly.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
 				INFOPLIST_FILE = Stitchly/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -422,6 +455,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.lukejeffproduct.stitchly;
 				PRODUCT_NAME = Stitchly;
+				PROVISIONING_PROFILE_SPECIFIER = "com.lukejeffproduct.stitchly AppStore";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -479,7 +513,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 26;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = GJR42FB3HW;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -603,6 +637,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		973FB1F6350E3A54F25E5628 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = exactVersion;
+				version = 12.17.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		976F344F3163702F8F654873 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 973FB1F6350E3A54F25E5628 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0BFA9D8108D60665E696E87A /* Project object */;
 }

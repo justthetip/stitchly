@@ -85,8 +85,8 @@ Run the production smoke test from a clean public App Store installation on a no
 
 1. email/password sign-in and Sign in with Apple reach the same owner-scoped account experience;
 2. the example pattern or a permitted test PDF imports, review edits save, a representative cover appears, and the authenticated original PDF opens;
-3. a project can be created, resumed from Home, switched between sections, advanced through a grouped repeat, noted, and completed;
-4. revisiting Home, Library, Projects, and cover images uses the cached state without stale cross-account data;
+3. a project can be created, resumed from Projects, switched between sections, advanced through a grouped repeat, noted, and completed;
+4. revisiting Library, Projects, and cover images uses the cached state without stale cross-account data;
 5. sign-out removes private cached data and returns to native authentication.
 
 Check launch health at release, +1 hour, +24 hours, and +72 hours:

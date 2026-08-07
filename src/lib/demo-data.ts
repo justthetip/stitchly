@@ -77,21 +77,38 @@ const instructionsByPattern = Object.fromEntries(
   ]),
 ) as Record<string, PatternInstructionRecord[]>;
 
-export const demoProjects: DemoProject[] = [{
-  id: catalog.project.id,
-  pattern_id: catalog.project.patternId,
-  name: catalog.project.name,
-  status: catalog.project.status as DemoProject["status"],
-  yarn: catalog.project.yarn,
-  current_instruction: catalog.project.currentInstruction,
-  started_at: catalog.project.startedAt,
-  last_worked_at: catalog.project.lastWorkedAt,
-  completed_at: catalog.project.completedAt,
-  pattern_name: catalog.project.patternName,
-  total_instructions: catalog.project.totalInstructions,
-  craft: catalog.project.craft as DemoProject["craft"],
-  cover_url: catalog.project.coverUrl,
-}];
+export const demoProjects: DemoProject[] = [
+  {
+    id: catalog.project.id,
+    pattern_id: catalog.project.patternId,
+    name: catalog.project.name,
+    status: catalog.project.status as DemoProject["status"],
+    yarn: catalog.project.yarn,
+    current_instruction: catalog.project.currentInstruction,
+    started_at: catalog.project.startedAt,
+    last_worked_at: catalog.project.lastWorkedAt,
+    completed_at: catalog.project.completedAt,
+    pattern_name: catalog.project.patternName,
+    total_instructions: catalog.project.totalInstructions,
+    craft: catalog.project.craft as DemoProject["craft"],
+    cover_url: catalog.project.coverUrl,
+  },
+  {
+    id: "demo-completed-mini-whale",
+    pattern_id: "demo-mini-whale",
+    name: "My Mini Whale",
+    status: "completed",
+    yarn: "Worsted weight yarn",
+    current_instruction: 12,
+    started_at: "2026-07-12T10:00:00.000Z",
+    last_worked_at: "2026-07-18T15:30:00.000Z",
+    completed_at: "2026-07-18T15:30:00.000Z",
+    pattern_name: "Mini Whale",
+    total_instructions: 12,
+    craft: "crochet",
+    cover_url: "/demo/mini-whale-cover.png",
+  },
+];
 
 export function demoPattern(id: string) { return demoPatterns.find((pattern) => pattern.id === id); }
 export function demoProject(id: string) {

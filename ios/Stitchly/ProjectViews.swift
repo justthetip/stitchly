@@ -1,225 +1,6 @@
 import SwiftUI
 import StoreKit
 
-@MainActor final class HomeStore: ObservableObject {
-    @Published var activeProject: Project?
-    @Published var sourceLabel: String?
-    @Published var isLoading = false
-    @Published var isRefreshing = false
-    @Published var error: String?
-    private var loadedIdentity: String?
-
-    func load(client: APIClient, userID: String?, forceRefresh: Bool = false) async {
-        error = nil
-        let identity = userID == nil || client.token == "demo" ? "guest" : userID!
-        if loadedIdentity != identity {
-            activeProject = nil
-            sourceLabel = nil
-            loadedIdentity = identity
-        }
-        if userID == nil || client.token == "demo" {
-            isLoading = true; defer { isLoading = false }
-            if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
-            activeProject = ProcessInfo.processInfo.arguments.contains("-emptyProjectsDemo") ? nil : DemoData.projectWithLocalProgress
-            sourceLabel = activeProject.flatMap { project in
-                DemoData.instructions.first(where: { $0.position == project.currentInstruction })?.sourceLabel
-            }
-            return
-        }
-        guard let userID else { return }
-        let cachedProjects = await AppDataCache.shared.cachedProjects(for: userID)
-        if let cachedProjects {
-            activeProject = cachedProjects.value.first(where: { $0.status == "active" })
-            if let activeProject, let cachedDetail = await AppDataCache.shared.cachedProjectDetail(for: userID, projectID: activeProject.id) {
-                sourceLabel = cachedDetail.value.instructions.first(where: { $0.position == activeProject.currentInstruction })?.sourceLabel
-            }
-        }
-        if !forceRefresh, let cachedProjects, cachedProjects.isFresh() { return }
-        isLoading = cachedProjects == nil
-        isRefreshing = cachedProjects != nil
-        defer { isLoading = false; isRefreshing = false }
-        do {
-            let projects = try await AppDataCache.shared.refreshProjects(for: userID, client: client)
-            activeProject = projects.first(where: { $0.status == "active" })
-            guard let activeProject else { sourceLabel = nil; return }
-            let detail = try await AppDataCache.shared.refreshProjectDetail(for: userID, projectID: activeProject.id, client: client)
-            sourceLabel = detail.instructions.first(where: { $0.position == activeProject.currentInstruction })?.sourceLabel
-        } catch { if cachedProjects == nil { self.error = error.localizedDescription } }
-    }
-}
-
-struct HomeView: View {
-    @EnvironmentObject private var auth: AuthManager
-    @StateObject private var store = HomeStore()
-    let showLibrary: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            Group {
-                if store.isLoading && store.activeProject == nil {
-                    LoadingStateView(title: "Finding your current project", message: "Loading your most recently worked project and saved step…")
-                } else if let project = store.activeProject {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 22) {
-                            HomeFeatureStrip()
-                            VStack(alignment: .leading, spacing: 14) {
-                                HStack(alignment: .top, spacing: 14) {
-                                    ListCoverThumbnail(path: project.coverUrl, fallbackAsset: "ProjectFallback", size: 88)
-                                    VStack(alignment: .leading, spacing: 5) {
-                                        if (auth.isGuest || auth.token == "demo") && project.id == DemoData.project.id {
-                                            Label("DEMO PROJECT", systemImage: "sparkles")
-                                                .font(.caption.weight(.bold))
-                                                .foregroundStyle(Color.white)
-                                                .padding(.horizontal, 9)
-                                                .padding(.vertical, 5)
-                                                .background(Color.brandPink, in: .capsule)
-                                        } else {
-                                            Label("Current project", systemImage: "sparkles").font(.headline).foregroundStyle(Color.brandPink)
-                                        }
-                                        Text(project.name).font(.title2.bold()).foregroundStyle(Color.ink)
-                                        Text(project.patternName ?? "Pattern").font(.headline).foregroundStyle(.secondary)
-                                    }
-                                }
-                                if (auth.isGuest || auth.token == "demo") && project.id == DemoData.project.id {
-                                    Text("Explore the full Stitchly reader. Your progress stays on this device.")
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(Color.ink)
-                                }
-                                Text(store.sourceLabel ?? "Step \(project.currentInstruction)").font(.title3.weight(.semibold)).foregroundStyle(Color.ink)
-                                ProgressView(value: Double(project.currentInstruction), total: Double(max(project.totalInstructions ?? 1, 1))).tint(.brandOrange)
-                                Text("Step \(project.currentInstruction) of \(project.totalInstructions ?? 0)").font(.subheadline).foregroundStyle(.secondary)
-                                NavigationLink(value: project) {
-                                    Label((auth.isGuest || auth.token == "demo") && project.id == DemoData.project.id ? "Enter interactive demo" : "Resume project", systemImage: "play.fill").frame(maxWidth: .infinity)
-                                }
-                                .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
-                                .accessibilityIdentifier("resume-current-project")
-                            }
-                            .padding(22)
-                            .background(Color.cream, in: .rect(cornerRadius: 24))
-                        }
-                        .padding()
-                    }
-                } else {
-                    ScrollView {
-                        VStack(spacing: 22) {
-                            HomeFeatureStrip()
-                            ActionableEmptyState(icon: "doc.badge.plus", title: "Bring in your first pattern", message: "Import a pattern PDF and Stitchly will turn its instructions into clear steps that remember your place.", actionTitle: "Import a pattern", actionIcon: "doc.badge.plus", isDisabled: store.isLoading, action: showLibrary)
-                                .frame(minHeight: 330)
-                        }
-                        .padding()
-                    }
-                }
-            }
-            .navigationTitle("Home")
-            .navigationDestination(for: Project.self) { project in
-                ReaderView(project: project) { Task { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) } }
-            }
-            .task(id: auth.contentIdentity) { await store.load(client: auth.client, userID: auth.user?.id) }
-            .refreshable { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) }
-            .alert("Couldn’t load Home", isPresented: .init(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("Try again") { Task { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) } } } message: { Text(store.error ?? "") }
-        }
-    }
-}
-
-private struct HomeFeatureStrip: View {
-    private struct Feature: Identifiable {
-        let id: Int
-        let image: String
-        let eyebrow: String
-        let title: String
-        let message: String
-        let color: Color
-    }
-
-    private let features = [
-        Feature(id: 0, image: "OnboardingBringPatterns", eyebrow: "Import in moments", title: "PDF to clear steps", message: "Quickly turn a pattern PDF into one consistent, trackable format.", color: .brandBlue),
-        Feature(id: 1, image: "OnboardingClearSteps", eyebrow: "Follow clear steps", title: "Focus on making", message: "Work through one instruction at a time instead of scanning the PDF.", color: .brandOrange),
-        Feature(id: 2, image: "OnboardingKeepPlace", eyebrow: "Never lose your place", title: "Resume right here", message: "Return to the exact step where you stopped, ready to keep making.", color: .brandPink),
-    ]
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.scenePhase) private var scenePhase
-    @State private var selection = 0
-
-    private var shouldAutoAdvance: Bool {
-        !reduceMotion && !voiceOverEnabled && scenePhase == .active
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Turn a pattern PDF into clear, trackable steps")
-                .font(.title2.bold())
-                .foregroundStyle(Color.ink)
-                .fixedSize(horizontal: false, vertical: true)
-            TabView(selection: $selection) {
-                ForEach(features) { feature in
-                    HStack(spacing: 14) {
-                        Image(feature.image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: dynamicTypeSize.isAccessibilitySize ? 96 : 124)
-                            .frame(maxHeight: .infinity)
-                            .clipped()
-                            .clipShape(.rect(cornerRadius: 18))
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(feature.eyebrow.uppercased())
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(Color.ink.opacity(0.68))
-                            Text(feature.title)
-                                .font(.title3.bold())
-                                .foregroundStyle(Color.ink)
-                            Text(feature.message)
-                                .font(.subheadline)
-                                .foregroundStyle(Color.ink)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .padding(14)
-                    .background(feature.color.opacity(0.22), in: .rect(cornerRadius: 20))
-                    .padding(.horizontal, 2)
-                    .tag(feature.id)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("\(feature.eyebrow). \(feature.title). \(feature.message)")
-                    .accessibilityValue("Page \(feature.id + 1) of \(features.count)")
-                    .accessibilityIdentifier("home-feature-page-\(feature.id + 1)")
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: dynamicTypeSize.isAccessibilitySize ? 300 : 190)
-            .accessibilityIdentifier("home-value-carousel")
-            HStack(spacing: 8) {
-                ForEach(features) { feature in
-                    Button {
-                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { selection = feature.id }
-                    } label: {
-                        Capsule()
-                            .fill(selection == feature.id ? Color.ink : Color.ink.opacity(0.2))
-                            .frame(width: selection == feature.id ? 24 : 8, height: 8)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Show \(feature.eyebrow)")
-                    .accessibilityValue("Page \(feature.id + 1) of \(features.count)")
-                }
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .padding(16)
-        .background(Color.brandBlue.opacity(0.18), in: .rect(cornerRadius: 22))
-        .accessibilityElement(children: .contain)
-        .accessibilityValue("Page \(selection + 1) of \(features.count)")
-        .accessibilityIdentifier("home-feature-strip")
-        .task(id: "\(selection)-\(shouldAutoAdvance)") {
-            guard shouldAutoAdvance else { return }
-            try? await Task.sleep(for: .seconds(6))
-            guard !Task.isCancelled, shouldAutoAdvance else { return }
-            withAnimation(.easeInOut(duration: 0.4)) { selection = (selection + 1) % features.count }
-        }
-    }
-}
-
 @MainActor final class ProjectsStore: ObservableObject {
     @Published var projects: [Project] = []
     @Published var loading = false
@@ -239,7 +20,7 @@ private struct HomeFeatureStrip: View {
         if userID == nil || client.token == "demo" {
             loading = true; defer { loading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
-            projects = ProcessInfo.processInfo.arguments.contains("-emptyProjectsDemo") ? [] : [DemoData.projectWithLocalProgress]
+            projects = ProcessInfo.processInfo.arguments.contains("-emptyProjectsDemo") ? [] : DemoData.projectsWithLocalProgress
             return
         }
         guard let userID else { return }
@@ -272,8 +53,22 @@ struct ProjectsView: View {
                     List {
                         let active = store.projects.filter { $0.status != "completed" }
                         let completed = store.projects.filter { $0.status == "completed" }
-                        if !active.isEmpty { Section("Active") { ForEach(active) { project in projectLink(project) } } }
-                        if !completed.isEmpty { Section("Completed") { ForEach(completed) { project in projectLink(project) } } }
+                        if !active.isEmpty {
+                            Section {
+                                ForEach(active) { project in projectLink(project) }
+                            } header: {
+                                ProjectStateHeader(title: "In progress", systemImage: "play.circle.fill", color: .brandPink)
+                                    .accessibilityIdentifier("projects-in-progress-section")
+                            }
+                        }
+                        if !completed.isEmpty {
+                            Section {
+                                ForEach(completed) { project in projectLink(project) }
+                            } header: {
+                                ProjectStateHeader(title: "Completed", systemImage: "checkmark.seal.fill", color: .ink)
+                                    .accessibilityIdentifier("projects-completed-section")
+                            }
+                        }
                     }.listStyle(.insetGrouped)
                 }
             }.navigationTitle("Projects")
@@ -332,7 +127,7 @@ struct ProjectRow: View {
         HStack(spacing: 12) {
             ListCoverThumbnail(path: project.coverUrl, fallbackAsset: "ProjectFallback", size: 64)
             VStack(alignment: .leading, spacing: 8) {
-                if project.id == DemoData.project.id {
+                if DemoData.isDemoProject(project.id) {
                     Label("DEMO PROJECT", systemImage: "sparkles")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(Color.white)
@@ -357,6 +152,19 @@ struct ProjectRow: View {
     }
 }
 
+private struct ProjectStateHeader: View {
+    let title: String
+    let systemImage: String
+    let color: Color
+
+    var body: some View {
+        Label(title, systemImage: systemImage)
+            .font(.headline)
+            .foregroundStyle(color)
+            .textCase(nil)
+    }
+}
+
 struct ProjectOverviewView: View {
     @EnvironmentObject private var auth: AuthManager
     let project: Project
@@ -368,13 +176,18 @@ struct ProjectOverviewView: View {
     @State private var showOriginal = false
     @State private var isCompleted: Bool
     @State private var error: String?
+    @State private var checkedMaterials: Set<String>
 
     init(project: Project, onUpdated: @escaping () -> Void) {
         self.project = project; self.onUpdated = onUpdated; _isCompleted = State(initialValue: project.status == "completed")
+        _checkedMaterials = State(initialValue: ProjectMaterials.loadChecks(projectID: project.id))
     }
 
     private var currentLabel: String { detail?.instructions.first(where: { $0.position == project.currentInstruction })?.sourceLabel ?? "Step \(project.currentInstruction)" }
-    private var isGuestDemo: Bool { (auth.isGuest || auth.token == "demo") && project.id == DemoData.project.id }
+    private var isGuestDemo: Bool { (auth.isGuest || auth.token == "demo") && DemoData.isDemoProject(project.id) }
+    private var isExploreProject: Bool { isGuestDemo && !isCompleted }
+    private var explorePattern: Pattern? { DemoData.patterns.first { $0.id == project.patternId } }
+    private var materials: [ProjectMaterial] { ProjectMaterials.derive(project: project, pattern: explorePattern, instructions: detail?.instructions ?? []) }
     var body: some View {
         List {
             Section {
@@ -393,22 +206,96 @@ struct ProjectOverviewView: View {
                     if let yarn = project.yarn, !yarn.isEmpty { Label(yarn, systemImage: "circle.fill") }
                 }.padding(.vertical, 8)
             }
+            if isExploreProject {
+                Section {
+                    Text("This project started as a pattern PDF from another website—not as a tidy list of steps. Stitchly kept its original terms, then organized the instructions into a consistent format you can actually work through.")
+                        .foregroundStyle(.secondary)
+                    Button { showOriginal = true } label: {
+                        ExploreTransformationStep(
+                            number: 1,
+                            icon: "doc.richtext",
+                            title: "The original PDF",
+                            message: "Designed for reading and printing, so finding your place means scanning pages again."
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("explore-original-pdf")
+                    if let explorePattern {
+                        NavigationLink {
+                            PatternDetailView(pattern: explorePattern)
+                        } label: {
+                            ExploreTransformationStep(
+                                number: 2,
+                                icon: "list.bullet.rectangle",
+                                title: "A standardized pattern",
+                                message: "Source-order sections, rows, rounds, setup, and finishing are laid out consistently."
+                            )
+                        }
+                        .accessibilityIdentifier("explore-standardized-pattern")
+                    }
+                    ExploreTransformationStep(
+                        number: 3,
+                        icon: "bookmark.fill",
+                        title: "A live project",
+                        message: "Your current step and progress are ready whenever you come back."
+                    )
+                } header: {
+                    Text("From PDF to a project")
+                        .accessibilityIdentifier("explore-project-transformation")
+                } footer: {
+                    Text("The focused reader below is the result of that transformation.")
+                }
+            }
+            Section {
+                if materials.isEmpty {
+                    Text("No structured materials were found. Check the original PDF before starting; Stitchly won’t guess missing supplies.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(materials) { material in
+                        Button { toggleMaterial(material.id) } label: {
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: checkedMaterials.contains(material.id) ? "checkmark.circle.fill" : "circle")
+                                    .font(.title3).foregroundStyle(checkedMaterials.contains(material.id) ? Color.brandPink : Color.secondary)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(material.name)
+                                        .font(.headline)
+                                        .foregroundStyle(Color.ink)
+                                        .strikethrough(checkedMaterials.contains(material.id))
+                                    if let detail = material.detail { Text(detail).font(.subheadline).foregroundStyle(.secondary) }
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(material.name), \(checkedMaterials.contains(material.id) ? "ready" : "not ready")")
+                        .accessibilityHint("Toggles this material in the project checklist")
+                    }
+                }
+            } header: {
+                Text("Materials checklist")
+                    .accessibilityIdentifier("project-materials")
+            } footer: {
+                Text("Check your setup when you start or return. Your choices stay on this device.")
+            }
             Section {
                 NavigationLink {
                     ReaderView(project: project, exitTitle: "Project") {
                         isCompleted = true
                         onUpdated()
                     }
-                } label: { Label(isGuestDemo ? "Enter interactive demo" : (isCompleted ? "Review instructions" : "Continue project"), systemImage: "play.fill") }
+                } label: { Label(isCompleted ? "Review instructions" : (isExploreProject ? "Open the clear step-by-step reader" : "Continue project"), systemImage: "play.fill") }
                     .accessibilityIdentifier("continue-project")
-                Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext") }
-                    .accessibilityIdentifier("project-original-pdf")
+                if !isExploreProject {
+                    Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext") }
+                        .accessibilityIdentifier("project-original-pdf")
+                }
                 if !isCompleted {
                     Button { beginCompletion() } label: { Label("Mark project complete", systemImage: "checkmark.circle") }
                         .disabled(isCompleting)
                         .accessibilityIdentifier("complete-project")
                 }
                 if isCompleting { LoadingBanner(message: "Marking this project complete and updating your library…") }
+            } header: {
+                if isExploreProject { Text("Make from the result") }
             }
             Section("Saved notes") {
                 if isLoading && detail == nil { LoadingBanner(message: "Loading project details and saved notes…") }
@@ -434,6 +321,10 @@ struct ProjectOverviewView: View {
         do { detail = try await AppDataCache.shared.refreshProjectDetail(for: userID, projectID: project.id, client: auth.client) }
         catch { if detail == nil { self.error = error.localizedDescription } }
     }
+    private func toggleMaterial(_ id: String) {
+        if checkedMaterials.contains(id) { checkedMaterials.remove(id) } else { checkedMaterials.insert(id) }
+        ProjectMaterials.saveChecks(checkedMaterials, projectID: project.id)
+    }
     private func complete() async {
         guard !isCompleting, !isCompleted else { return }
         isCompleting = true; defer { isCompleting = false }
@@ -454,10 +345,41 @@ struct ProjectOverviewView: View {
     }
 }
 
+private struct ExploreTransformationStep: View {
+    let number: Int
+    let icon: String
+    let title: String
+    let message: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text("\(number)")
+                .font(.caption.bold())
+                .foregroundStyle(Color.white)
+                .frame(width: 26, height: 26)
+                .background(number == 3 ? Color.brandPink : Color.ink, in: .circle)
+                .accessibilityHidden(true)
+            Image(systemName: icon)
+                .font(.headline)
+                .foregroundStyle(number == 3 ? Color.brandPink : Color.ink)
+                .frame(width: 24)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline).foregroundStyle(Color.ink)
+                Text(message).font(.subheadline).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Step \(number), \(title). \(message)")
+    }
+}
+
 struct ReaderView: View {
     @EnvironmentObject private var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .title3) private var repeatBadgeFontSize: CGFloat = 20
     let project: Project
     @State private var instructions: [Instruction] = []
     @State private var position: Int
@@ -473,6 +395,15 @@ struct ReaderView: View {
     @State private var hasCompletedProject: Bool
     @State private var shouldExitAfterSave = false
     @State private var readerError: String?
+    @State private var selectedGlossaryTerm: PatternGlossaryTerm?
+    @State private var stepPhotos: [ProjectStepPhoto] = []
+    @State private var selectedPhoto: ProjectStepPhoto?
+    @State private var showStepPhotos = false
+    @State private var showPhotoSource = false
+    @State private var showPhotoPicker = false
+    @State private var photoSource: UIImagePickerController.SourceType = .camera
+    @State private var isSavingPhoto = false
+    @State private var isDeletingPhoto = false
     let exitTitle: String
     let onCompleted: () -> Void
     init(project: Project, showSectionsInitially: Bool = false, exitTitle: String = "Projects", onCompleted: @escaping () -> Void = {}) {
@@ -488,7 +419,7 @@ struct ReaderView: View {
     var currentStep: ReaderStep? { steps.indices.contains(currentStepIndex) ? steps[currentStepIndex] : nil }
     var current: Instruction? { currentStep?.instruction }
     var isAtLastStep: Bool { !steps.isEmpty && currentStepIndex == steps.count - 1 }
-    private var isGuestDemo: Bool { (auth.isGuest || auth.token == "demo") && project.id == DemoData.project.id }
+    private var isGuestDemo: Bool { (auth.isGuest || auth.token == "demo") && DemoData.isDemoProject(project.id) }
     var body: some View {
         ZStack {
             LinearGradient(colors: [.cream.opacity(0.65), .white], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
@@ -504,26 +435,16 @@ struct ReaderView: View {
                 if isLoading {
                     LoadingStateView(title: "Opening your project", message: "Loading pattern sections, your current step, and saved notes.")
                 } else { ScrollView {
-                    VStack(spacing: 18) {
+                    LazyVStack(spacing: 18) {
                         Text(current?.sourceLabel ?? "Step \(position)").font(.title3.weight(.semibold)).foregroundStyle(Color.brandPink)
-                        Text(current?.instructions ?? "Loading your next step…")
-                            .font(.system(.title, design: .rounded, weight: .semibold))
-                            .foregroundStyle(Color.ink)
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(8)
-                            .padding(20)
-                            .background(Color.white, in: .rect(cornerRadius: 20))
-                        if let repeatCount = currentStep?.repeatCount {
-                            Label("×\(repeatCount) repeats", systemImage: "repeat")
-                                .font(.title3.weight(.bold))
-                                .foregroundStyle(Color.ink)
-                                .padding(.horizontal, 18)
-                                .padding(.vertical, 12)
-                                .background(Color.brandOrange.opacity(0.2), in: .capsule)
-                                .accessibilityLabel("Repeat \(repeatCount) times")
-                                .accessibilityIdentifier("reader-repeat-count")
+                        Button { showStepPhotos = true } label: {
+                            Label(stepPhotos.isEmpty ? "Add a private step photo" : "Step photos (\(stepPhotos.count))", systemImage: "camera.fill")
+                                .frame(maxWidth: .infinity)
                         }
-                        if let stitchCount = current?.stitchCount { Label("\(stitchCount) stitches", systemImage: "number").font(.headline).foregroundStyle(Color.ink) }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.ink)
+                        .controlSize(.large)
+                        .accessibilityIdentifier("reader-step-photos")
                         if let notes = current?.notes {
                             Text(notes)
                                 .font(.body)
@@ -531,6 +452,28 @@ struct ReaderView: View {
                                 .padding()
                                 .background(Color.cream, in: .rect(cornerRadius: 16))
                         }
+                        GlossaryInstructionText(text: current?.instructions ?? "Loading your next step…") { selectedGlossaryTerm = $0 }
+                            .font(.system(.title, design: .rounded, weight: .semibold))
+                            .foregroundStyle(Color.ink)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(8)
+                            .padding(20)
+                            .background(Color.white, in: .rect(cornerRadius: 20))
+                        if let repeatCount = currentStep?.repeatCount {
+                            HStack(spacing: 8) {
+                                Image(systemName: "repeat").accessibilityHidden(true)
+                                Text("×\(repeatCount) repeats").accessibilityHidden(true)
+                            }
+                                .font(.system(size: repeatBadgeFontSize, weight: .bold))
+                                .foregroundStyle(Color.ink)
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 12)
+                                .background(Color.brandOrange.opacity(0.2), in: .capsule)
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel("Repeat \(repeatCount) times")
+                                .accessibilityIdentifier("reader-repeat-count")
+                        }
+                        if let stitchCount = current?.stitchCount { Label("\(stitchCount) stitches", systemImage: "number").font(.headline).foregroundStyle(Color.ink) }
                     }.frame(maxWidth: .infinity).padding(28)
                 }.defaultScrollAnchor(isGuestDemo ? .top : .center) }
                 readerControls.padding()
@@ -562,8 +505,11 @@ struct ReaderView: View {
             .fullScreenCover(isPresented: $showSections) { sectionNavigator }
             .sheet(isPresented: $showOriginal) { OriginalPDFView(patternID: project.patternId, title: project.patternName ?? "Original pattern") }
             .sheet(isPresented: $showCompletion) { completionView }
+            .sheet(item: $selectedGlossaryTerm) { GlossaryTermSheet(term: $0) }
+            .sheet(isPresented: $showStepPhotos) { stepPhotoJournalSheet }
             .sheet(isPresented: $showNotes) { NavigationStack { Form { TextEditor(text: $note).frame(minHeight: 160); if isSavingNote { Section { LoadingBanner(message: "Saving this note to step \(position)…").frame(maxWidth: .infinity) } } }.navigationTitle("Step note").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showNotes = false }.disabled(isSavingNote) }; ToolbarItem(placement: .confirmationAction) { Button { Task { await saveNote() } } label: { if isSavingNote { ProgressView().accessibilityLabel("Saving note") } else { Text("Save") } }.disabled(isSavingNote || note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) } } } }
             .task { await loadReader() }
+            .task(id: position) { loadStepPhotos() }
             .onChange(of: isSavingProgress) { _, saving in
                 if !saving && shouldExitAfterSave {
                     shouldExitAfterSave = false
@@ -575,6 +521,49 @@ struct ReaderView: View {
                 else if isSavingProgress { LoadingBanner(message: "Saving your place at step \(position)…").padding(.top, 8) }
             }
             .alert("Couldn’t update your project", isPresented: .init(get: { readerError != nil }, set: { if !$0 { readerError = nil } })) { Button("OK") {} } message: { Text(readerError ?? "") }
+    }
+    private var stepPhotoJournalSheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Label("Private · only on this device", systemImage: "lock.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.ink)
+                    Text("Capture what step \(position) looks like when it is done, so you can compare your work when you return.")
+                        .foregroundStyle(Color.ink)
+                    Button { showPhotoSource = true } label: {
+                        Label(isSavingPhoto ? "Saving photo…" : "Take or choose a photo", systemImage: "camera")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.brandPink)
+                    .controlSize(.large)
+                    .disabled(isSavingPhoto)
+                    .accessibilityIdentifier("reader-add-photo")
+                    if stepPhotos.isEmpty {
+                        ContentUnavailableView("No photos for this step", systemImage: "photo", description: Text("Your first photo will appear here."))
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 110))], spacing: 14) {
+                            ForEach(stepPhotos) { photo in
+                                Button { selectedPhoto = photo } label: { ProjectPhotoThumbnail(photo: photo) }
+                                    .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                .padding(24)
+            }
+            .navigationTitle("Step \(position) photos")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showStepPhotos = false } } }
+            .fullScreenCover(isPresented: $showPhotoPicker) { ProjectPhotoPicker(sourceType: photoSource, onImage: savePhoto) }
+            .sheet(item: $selectedPhoto) { photo in ProjectPhotoDetailSheet(photo: photo, isDeleting: isDeletingPhoto) { deletePhoto(photo) } }
+            .confirmationDialog("Add a private step photo", isPresented: $showPhotoSource, titleVisibility: .visible) {
+                Button("Take photo", systemImage: "camera") { photoSource = .camera; showPhotoPicker = true }
+                Button("Choose from library", systemImage: "photo.on.rectangle") { photoSource = .photoLibrary; showPhotoPicker = true }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text("The photo will be linked to this exact step and stored only on this device.") }
+        }
     }
     @ViewBuilder private var readerHeader: some View {
         if dynamicTypeSize.isAccessibilitySize {
@@ -717,7 +706,7 @@ struct ReaderView: View {
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
             if ProcessInfo.processInfo.arguments.contains("-readerRepeatDemo") { instructions = DemoData.repeatInstructions; position = DemoData.repeatProject.currentInstruction; return }
             instructions = DemoData.instructions(for: project.patternId)
-            let savedPosition = UserDefaults.standard.integer(forKey: "demoReaderPosition")
+            let savedPosition = UserDefaults.standard.integer(forKey: DemoData.readerPositionKey(for: project.id))
             position = instructions.contains(where: { $0.position == savedPosition }) ? savedPosition : project.currentInstruction
             return
         }
@@ -732,10 +721,10 @@ struct ReaderView: View {
     }
     private func persistProgress() async {
         guard !auth.isGuest else {
-            UserDefaults.standard.set(position, forKey: "demoReaderPosition")
+            UserDefaults.standard.set(position, forKey: DemoData.readerPositionKey(for: project.id))
             return
         }
-        if auth.token == "demo" { UserDefaults.standard.set(position, forKey: "demoReaderPosition"); return }
+        if auth.token == "demo" { UserDefaults.standard.set(position, forKey: DemoData.readerPositionKey(for: project.id)); return }
         isSavingProgress = true; defer { isSavingProgress = false }
         struct Body: Encodable { let currentInstruction: Int }
         do {
@@ -743,6 +732,30 @@ struct ReaderView: View {
             if let userID = auth.user?.id { await AppDataCache.shared.invalidateProject(for: userID, projectID: project.id) }
             Telemetry.shared.track("reader_progressed")
         } catch { readerError = error.localizedDescription }
+    }
+    private func loadStepPhotos() {
+        do { stepPhotos = try ProjectPhotoJournal.load(projectID: project.id, instructionPosition: position) }
+        catch { readerError = "Private step photos could not load." }
+    }
+    private func savePhoto(_ image: UIImage) {
+        guard !isSavingPhoto, let data = image.jpegData(compressionQuality: 0.82) else { return }
+        isSavingPhoto = true
+        Task { @MainActor in
+            defer { isSavingPhoto = false }
+            do {
+                _ = try ProjectPhotoJournal.save(data, projectID: project.id, instructionPosition: position, section: current?.section ?? "Pattern")
+                loadStepPhotos()
+            } catch { readerError = "This photo could not be saved on your device." }
+        }
+    }
+    private func deletePhoto(_ photo: ProjectStepPhoto) {
+        guard !isDeletingPhoto else { return }
+        isDeletingPhoto = true
+        Task { @MainActor in
+            defer { isDeletingPhoto = false }
+            do { try ProjectPhotoJournal.delete(photo); selectedPhoto = nil; loadStepPhotos() }
+            catch { readerError = "This photo could not be deleted." }
+        }
     }
     private func completeProject() async {
         guard !isCompletingProject, isAtLastStep, !hasCompletedProject else { return }
@@ -763,7 +776,7 @@ struct ReaderView: View {
                 return
             }
         } else {
-            UserDefaults.standard.set(position, forKey: "demoReaderPosition")
+            UserDefaults.standard.set(position, forKey: DemoData.readerPositionKey(for: project.id))
         }
         hasCompletedProject = true
         Telemetry.shared.track("project_completed_in_reader")

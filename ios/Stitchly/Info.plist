@@ -24,6 +24,10 @@
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.lifestyle</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take private photos of your project at each pattern step.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose a project photo to attach privately to the current pattern step.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

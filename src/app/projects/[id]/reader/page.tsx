@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { Check, ChevronLeft, ChevronRight, Eye, NotebookPen, Sparkles, X } from "lucide-react";
+import { Camera, Check, ChevronLeft, ChevronRight, Eye, Lock, NotebookPen, Sparkles, Trash2, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,9 @@ import { AccountGateButton } from "@/components/account-gate";
 import { authClient } from "@/lib/auth-client";
 import { demoInstructions, demoPattern, demoProject, isDemoProject } from "@/lib/demo-data";
 import { loadProgress, saveProgress } from "@/lib/persistence";
+import { GlossaryInstructionText, GlossarySheet } from "@/components/pattern-glossary";
+import type { PatternGlossaryTerm } from "@/lib/pattern-glossary";
+import { deleteStepPhoto, loadStepPhotos, saveStepPhoto, type ProjectPhoto } from "@/lib/project-photo-journal";
 
 type Project = {
   id: string;
@@ -47,6 +50,11 @@ export default function ReaderPage() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedGlossaryTerm, setSelectedGlossaryTerm] = useState<PatternGlossaryTerm | null>(null);
+  const [stepPhotos, setStepPhotos] = useState<ProjectPhoto[]>([]);
+  const [selectedPhoto, setSelectedPhoto] = useState<ProjectPhoto | null>(null);
+  const [savingPhoto, setSavingPhoto] = useState(false);
+  const photoInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const bundled = demoProject(params.id);
@@ -88,6 +96,33 @@ export default function ReaderPage() {
       cancelled = true;
     };
   }, [params.id]);
+
+  useEffect(() => {
+    const position = instructions[index]?.position;
+    if (!project || position == null) return;
+    let cancelled = false;
+    loadStepPhotos(project.id, position).then((photos) => { if (!cancelled) setStepPhotos(photos); }).catch(() => { if (!cancelled) setError("Private step photos could not load"); });
+    return () => { cancelled = true; };
+  }, [project, instructions, index]);
+
+  async function capturePhoto(file: File | undefined) {
+    if (!file || !project || !instructions[index] || savingPhoto) return;
+    setSavingPhoto(true);
+    try {
+      const saved = await saveStepPhoto({ projectId: project.id, instructionPosition: instructions[index].position, section: instructions[index].section, image: file });
+      setStepPhotos((current) => [saved, ...current]);
+      setError("");
+    } catch { setError("This photo could not be saved on your device"); }
+    finally { setSavingPhoto(false); if (photoInput.current) photoInput.current.value = ""; }
+  }
+
+  async function removePhoto(photo: ProjectPhoto) {
+    if (savingPhoto) return;
+    setSavingPhoto(true);
+    try { await deleteStepPhoto(photo.id); setStepPhotos((current) => current.filter((candidate) => candidate.id !== photo.id)); setSelectedPhoto(null); }
+    catch { setError("This photo could not be deleted"); }
+    finally { setSavingPhoto(false); }
+  }
 
   async function move(nextIndex: number) {
     if (!project || !instructions[nextIndex]) return;
@@ -233,9 +268,17 @@ export default function ReaderPage() {
             {instruction.stitch_count != null && <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold">{instruction.stitch_count} sts expected</span>}
           </div>
           <p className="mt-3 text-xs font-semibold leading-relaxed text-muted-foreground">{instructionGuidance(instruction)}</p>
-          <p className="font-heading mt-4 text-2xl font-extrabold leading-relaxed md:text-3xl">{instruction.instructions}</p>
+          <GlossaryInstructionText text={instruction.instructions} onSelect={setSelectedGlossaryTerm} className="font-heading mt-4 text-2xl font-extrabold leading-relaxed md:text-3xl" />
           {instruction.notes && <p className="mt-4 rounded-xl bg-[#ffe6a8]/65 p-3 text-xs font-semibold leading-relaxed"><b>Pattern note:</b> {instruction.notes}</p>}
           {instructionNotes.map((note) => <p key={note.id} className="mt-3 rounded-xl bg-secondary/60 p-3 text-xs font-semibold">Your note: {note.body}</p>)}
+          <div className="mt-5 rounded-2xl bg-secondary/35 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div><p className="font-heading text-sm font-extrabold">What this step looked like</p><p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground"><Lock className="size-3" /> Private · only on this device</p></div>
+              <button type="button" disabled={savingPhoto} onClick={() => photoInput.current?.click()} className="flex shrink-0 items-center gap-2 rounded-full bg-primary px-3 py-2 text-xs font-extrabold text-white disabled:opacity-50"><Camera className="size-4" />{savingPhoto ? "Saving photo…" : "Take photo"}</button>
+              <input ref={photoInput} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => capturePhoto(event.target.files?.[0])} />
+            </div>
+            {stepPhotos.length > 0 ? <div className="mt-3 flex gap-2 overflow-x-auto">{stepPhotos.map((photo) => <button key={photo.id} type="button" onClick={() => setSelectedPhoto(photo)} className="size-20 shrink-0 overflow-hidden rounded-xl border bg-white"><PhotoImage photo={photo} /></button>)}</div> : <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Add a photo after this step so you can compare your work when you return.</p>}
+          </div>
           <div className="mt-5 flex flex-wrap gap-2">
             {session.data?.user ? <button onClick={() => setNoteOpen(true)} className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><NotebookPen className="size-3.5" />Add note</button> : <AccountGateButton title="Create an account to add notes" message="Notes are private and stay attached to your saved project step." next={`/projects/${project.id}/reader`} className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><NotebookPen className="size-3.5" />Add note</AccountGateButton>}
             {isDemoProject(project.id) ? <a href={demoPattern(project.pattern_id)?.pdf_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><Eye className="size-3.5" />View original</a> : <a href={`/api/patterns/${project.pattern_id}/original`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full border bg-background px-3 py-2 text-xs font-bold"><Eye className="size-3.5" />View original</a>}
@@ -270,8 +313,22 @@ export default function ReaderPage() {
           <SheetFooter><Button onClick={saveNote} disabled={saving || !noteText.trim()}>{saving ? "Saving…" : "Save note"}</Button></SheetFooter>
         </SheetContent>
       </Sheet>
+      <GlossarySheet term={selectedGlossaryTerm} onOpenChange={(open) => { if (!open) setSelectedGlossaryTerm(null); }} />
+      <Sheet open={selectedPhoto != null} onOpenChange={(open) => { if (!open) setSelectedPhoto(null); }}>
+        <SheetContent side="bottom" className="rounded-t-3xl">
+          {selectedPhoto && <><SheetHeader><SheetTitle>Private step photo</SheetTitle><SheetDescription>{selectedPhoto.section} · step {selectedPhoto.instructionPosition} · {new Date(selectedPhoto.capturedAt).toLocaleString("en-GB")}</SheetDescription></SheetHeader><div className="px-4"><div className="mx-auto max-h-[55dvh] overflow-hidden rounded-2xl bg-muted"><PhotoImage photo={selectedPhoto} className="max-h-[55dvh] w-full object-contain" /></div><button type="button" disabled={savingPhoto} onClick={() => removePhoto(selectedPhoto)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-extrabold text-red-700"><Trash2 className="size-4" />{savingPhoto ? "Deleting photo…" : "Delete photo"}</button></div></>}
+        </SheetContent>
+      </Sheet>
     </div>
   );
+}
+
+function PhotoImage({ photo, className = "size-full object-cover" }: { photo: ProjectPhoto; className?: string }) {
+  const url = useMemo(() => URL.createObjectURL(photo.image), [photo.image]);
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+  // Private IndexedDB object URLs cannot be optimized by the Next image pipeline.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={url} alt={`Private project photo from ${photo.section}, step ${photo.instructionPosition}`} className={className} />;
 }
 
 function Peek({ instruction, prefix }: { instruction: PatternInstructionRecord; prefix: string }) {

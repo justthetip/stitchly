@@ -5,6 +5,40 @@ import Foundation
 struct StitchlyTests {
     @Test func demoProgressIsValid() { #expect(DemoData.project.currentInstruction <= DemoData.pattern.totalInstructions) }
     @Test func productionAPIUsesTLS() { #expect(APIClient.baseURL.scheme == "https") }
+    @Test func firebaseConfigurationIsBundled() {
+        #expect(Bundle.main.url(forResource: "GoogleService-Info", withExtension: "plist") != nil)
+    }
+    @Test func glossaryMatchingPreservesSourceAndPrefersLongerTerms() {
+        let source = "K1, k2tog, then sc while scanning the row."
+        let segments = PatternGlossary.segments(in: source)
+        #expect(segments.map(\.text).joined() == source)
+        #expect(segments.compactMap(\.term?.id) == ["k", "k2tog", "sc"])
+    }
+    @Test func compactMagicRingCountUsesMagicRingDefinition() {
+        #expect(PatternGlossary.segments(in: "mr6, sc around").first?.term?.id == "mr")
+    }
+    @Test func projectMaterialsUseKnownDataAndExplicitInstructionEvidence() {
+        let materials = ProjectMaterials.derive(project: DemoData.completedProject, pattern: DemoData.patterns.first { $0.id == DemoData.completedProject.patternId }, instructions: DemoData.instructions(for: DemoData.completedProject.patternId))
+        #expect(materials.map(\.id) == ["yarn", "tool", "stuffing", "yarn-needle"])
+    }
+    @Test func materialChecksPersistPerProject() {
+        let suite = "ProjectMaterialsTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        ProjectMaterials.saveChecks(["yarn", "tool"], projectID: "one", defaults: defaults)
+        #expect(ProjectMaterials.loadChecks(projectID: "one", defaults: defaults) == ["yarn", "tool"])
+        #expect(ProjectMaterials.loadChecks(projectID: "two", defaults: defaults).isEmpty)
+    }
+    @Test func privatePhotoJournalKeepsProjectsAndStepsSeparate() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "PhotoJournalTests-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        _ = try ProjectPhotoJournal.save(Data("one".utf8), projectID: "project-a", instructionPosition: 2, section: "Body", directory: directory)
+        _ = try ProjectPhotoJournal.save(Data("two".utf8), projectID: "project-a", instructionPosition: 3, section: "Body", directory: directory)
+        _ = try ProjectPhotoJournal.save(Data("three".utf8), projectID: "project-b", instructionPosition: 2, section: "Body", directory: directory)
+        #expect(try ProjectPhotoJournal.load(projectID: "project-a", instructionPosition: 2, directory: directory).count == 1)
+        #expect(try ProjectPhotoJournal.load(projectID: "project-a", instructionPosition: 3, directory: directory).count == 1)
+        #expect(try ProjectPhotoJournal.load(projectID: "project-b", instructionPosition: 2, directory: directory).count == 1)
+    }
     @Test func firstLaunchSplashHasThreeSecondMinimum() { #expect(BrandedSplashView.minimumDuration == .seconds(3)) }
     @Test func instructionsAreGroupedIntoOrderedSections() {
         let sections = DemoData.instructions.patternSections
@@ -57,30 +91,23 @@ struct StitchlyTests {
             return (data, HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
 
-        let home = HomeStore()
         let library = LibraryStore()
         let projects = ProjectsStore()
 
-        await home.load(client: APIClient(token: "demo"), userID: nil)
         await library.load(client: APIClient(token: "demo"), userID: nil)
         await projects.load(client: APIClient(token: "demo"), userID: nil)
-        #expect(home.activeProject?.id == DemoData.project.id)
         #expect(library.patterns.count == DemoData.patterns.count)
-        #expect(projects.projects.map(\.id) == [DemoData.project.id])
+        #expect(projects.projects.map(\.id) == [DemoData.project.id, DemoData.completedProject.id])
 
-        await home.load(client: emptyClient, userID: userID)
         await library.load(client: emptyClient, userID: userID)
         await projects.load(client: emptyClient, userID: userID)
-        #expect(home.activeProject == nil)
         #expect(library.patterns.isEmpty)
         #expect(projects.projects.isEmpty)
 
-        await home.load(client: APIClient(token: "demo"), userID: nil)
         await library.load(client: APIClient(token: "demo"), userID: nil)
         await projects.load(client: APIClient(token: "demo"), userID: nil)
-        #expect(home.activeProject?.id == DemoData.project.id)
         #expect(library.patterns.count == DemoData.patterns.count)
-        #expect(projects.projects.map(\.id) == [DemoData.project.id])
+        #expect(projects.projects.map(\.id) == [DemoData.project.id, DemoData.completedProject.id])
     }
 
     @Test func reviewPromptIsClaimedOnlyForTheFirstProjectAndOnlyOnce() {

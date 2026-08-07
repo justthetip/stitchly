@@ -391,6 +391,7 @@ struct PatternDetailView: View {
     @State private var createProject = false
     @State private var showOriginal = false
     @State private var createdProject: Project?
+    @State private var selectedGlossaryTerm: PatternGlossaryTerm?
     var body: some View {
         List {
             Section {
@@ -408,6 +409,25 @@ struct PatternDetailView: View {
                 }.padding(.vertical)
             }
             if isLoading { Section { LoadingBanner(message: "Loading sections and laying out each instruction…").frame(maxWidth: .infinity) } }
+            let glossaryTerms = PatternGlossary.terms(in: instructions)
+            if !glossaryTerms.isEmpty {
+                Section("Glossary") {
+                    ForEach(glossaryTerms) { term in
+                        Button { selectedGlossaryTerm = term } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(term.shorthand).font(.headline).foregroundStyle(Color.ink)
+                                    Text(term.name).font(.subheadline).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "questionmark.circle").foregroundStyle(Color.brandPink)
+                            }
+                        }
+                        .accessibilityHint("Opens the pattern glossary")
+                    }
+                }
+                .accessibilityIdentifier("pattern-glossary")
+            }
             ForEach(instructions.patternSections) { patternSection in
                 Section {
                     ForEach(patternSection.instructions) { instruction in
@@ -430,6 +450,7 @@ struct PatternDetailView: View {
         .sheet(isPresented: $createProject) { CreateProjectView(initialPattern: pattern) { createdProject = $0 } }
         .sheet(isPresented: $showOriginal) { OriginalPDFView(patternID: pattern.id, title: pattern.name) }
         .sheet(item: $createdProject) { ProjectCreatedView(project: $0) }
+        .sheet(item: $selectedGlossaryTerm) { GlossaryTermSheet(term: $0) }
         .task { await load() }
         .alert("Couldn’t open pattern", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("Try again") { Task { await load() } } } message: { Text(error ?? "") }
     }

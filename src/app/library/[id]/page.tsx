@@ -7,12 +7,14 @@ import { FileText, Play, ShieldCheck } from "lucide-react";
 import { ScreenHeader } from "@/components/screen-header";
 import { PatternCover } from "@/components/pattern-cover";
 import { AccountGateButton } from "@/components/account-gate";
+import { GlossarySheet, GlossaryTermButton } from "@/components/pattern-glossary";
 import { authClient } from "@/lib/auth-client";
 import { demoInstructions, demoPattern, isDemoPattern } from "@/lib/demo-data";
 import {
   instructionLabel,
   type PatternInstructionRecord,
 } from "@/lib/pattern-instructions";
+import { glossaryTermsIn, type PatternGlossaryTerm } from "@/lib/pattern-glossary";
 
 type Pattern = {
   id: string;
@@ -37,6 +39,7 @@ export default function PatternDetailPage() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedGlossaryTerm, setSelectedGlossaryTerm] = useState<PatternGlossaryTerm | null>(null);
 
   useEffect(() => {
     const bundled = demoPattern(params.id);
@@ -82,6 +85,10 @@ export default function PatternDetailPage() {
     }
     return [...grouped.entries()];
   }, [instructions]);
+  const glossaryTerms = useMemo(
+    () => glossaryTermsIn(instructions.map((instruction) => instruction.instructions)),
+    [instructions],
+  );
 
   if (loading)
     return (
@@ -197,6 +204,17 @@ export default function PatternDetailPage() {
           </div>
         </section>
 
+        {glossaryTerms.length > 0 && (
+          <section className="mt-8" data-testid="pattern-glossary">
+            <p className="text-xs font-extrabold uppercase tracking-[.15em] text-primary">Glossary</p>
+            <h2 className="font-heading mt-1 text-2xl font-black">Pattern shorthand</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">These are the shorthand terms Stitchly found in this pattern. Tap one for its meaning.</p>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {glossaryTerms.map((term) => <GlossaryTermButton key={term.id} term={term} onSelect={setSelectedGlossaryTerm} />)}
+            </div>
+          </section>
+        )}
+
         <div className="mt-7 flex items-start gap-3 rounded-2xl bg-[#17324d] p-4 text-white">
           <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[#59c3eb]" />
           <div>
@@ -207,6 +225,7 @@ export default function PatternDetailPage() {
           </div>
         </div>
       </div>
+      <GlossarySheet term={selectedGlossaryTerm} onOpenChange={(open) => { if (!open) setSelectedGlossaryTerm(null); }} />
     </div>
   );
 }

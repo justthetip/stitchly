@@ -30,7 +30,7 @@ Both clients use the production API at `https://stitchly-application.vercel.app`
 - `ProjectViews.swift`: projects, project creation, focused reader, section jumping, progress and notes.
 - `AccountView.swift`: sign-out, deletion, privacy/support links.
 - `Models.swift`: API models, ordered pattern-section grouping, demo fixtures.
-- `Telemetry.swift`: privacy-safe operational events.
+- `Telemetry.swift`: privacy-safe, allow-listed first-party operational events. Firebase Analytics is separately initialized at app launch for automatic product analytics only; no custom Firebase events include Stitchly user content.
 - `StitchlyTests/` and `StitchlyUITests/`: unit, journey, loading, Dynamic Type, and accessibility coverage.
 
 `ios/project.yml` is the source of truth for the generated Xcode project. Run XcodeGen from `ios/` or use `xcodegen generate --spec ios/project.yml` from the repository root. Do not pass the `.xcodeproj` itself as `--project`; that creates a nested project accidentally.

@@ -9,9 +9,13 @@
 - Patterns need a complete native overview grouped into source-order sections; alphabetical section sorting is incorrect.
 - The focused reader must let a maker jump directly between sections and persist the selected position.
 - Guests can advance, go back, and jump between sections in the bundled demo project without authenticating. Save that demo reader position only on the device; cloud sync, notes, project completion, and private project creation remain account actions.
-- Bundled demo patterns and the demo project are guest-only. Once authentication succeeds, Home, Library, Projects, counts, search, and resume surfaces show only owner-scoped data; a new or empty account sees import/project empty-state calls to action. Signing out restores the guest demo without merging its local progress into the account.
-- Home explains the three primary benefits with a horizontally page-able carousel: quick PDF conversion into Stitchly's consistent format first, focused steps second, and saved place third. Automatic paging pauses for Reduce Motion, VoiceOver, inactive app/browser state, focus, and direct interaction.
+- Bundled demo patterns and projects are guest-only. Once authentication succeeds, Library, Projects, counts, search, and resume surfaces show only owner-scoped data; a new or empty account sees import/project empty-state calls to action. Signing out restores the guest demos without merging local progress into the account.
+- Projects is the default landing destination on web and iOS; there is no separate Home screen or Home tab. Guest Projects shows both an in-progress demo and a completed demo, visually separated by state, so the product journey is immediately explorable.
+- Opening the active guest demo project must show the product transformation before the reader: an external original PDF, the standardized source-order pattern, then the live project with saved progress. Authenticated project detail remains action-focused.
 - Original PDF terminology and labels matter. Do not normalize away meaningful row, round, setup, finishing, size, or section labels.
+- Pattern overviews expose a glossary containing only shorthand actually found in that pattern. Supported shorthand stays verbatim and becomes tappable in the reader, opening its craft explanation in a bottom sheet; unknown text remains untouched.
+- Every project overview has a persistent materials checklist derived from structured yarn/tool metadata and explicit supply evidence in its instructions. Checklist state is per-project and on-device until the backend gains a materials-completion field; never invent missing supplies.
+- The reader includes a private visual journal at the exact project/instruction position. Native images live in Application Support and web images in IndexedDB, with project, section, step, and date metadata. This MVP is explicitly on-device/private; any future community gallery requires opt-in publishing, moderation, and must never retroactively expose private images.
 
 ## Visual system
 
@@ -34,5 +38,5 @@
 ## Privacy and review
 
 - User PDFs, extracted pattern content, progress, and notes are private and linked to the account for app functionality.
-- Product interaction, performance, and crash diagnostics may be collected for analytics; no tracking or tracking domains.
+- Product interaction, performance, and crash diagnostics may be collected for analytics; no cross-company tracking or tracking domains. Native Firebase Analytics uses its automatic events only and must not receive pattern text, filenames, notes, account identifiers, or other user content as custom parameters.
 - Account deletion must remove the account and user data and remain explicitly confirmed.
