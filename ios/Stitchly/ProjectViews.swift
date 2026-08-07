@@ -25,7 +25,7 @@ import StoreKit
         }
         guard let userID else { return }
         let cached = await AppDataCache.shared.cachedProjects(for: userID)
-        if projects.isEmpty, let cached { projects = cached.value }
+        if let cached { projects = cached.value }
         if !forceRefresh, let cached, cached.isFresh() { return }
         loading = cached == nil && projects.isEmpty
         refreshing = !loading
@@ -73,7 +73,7 @@ struct ProjectsView: View {
                 }
             }.navigationTitle("Projects")
                 .toolbar { ToolbarItem(placement: .primaryAction) { Button("New project", systemImage: "plus", action: beginCreatingProject).disabled(store.loading || createProject || deletingProject) } }
-                .navigationDestination(for: Project.self) { project in ProjectOverviewView(project: project) { Task { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true, message: "Refreshing projects after your update…") } } }
+                .navigationDestination(for: Project.self) { project in ProjectOverviewView(project: project) { Task { await store.load(client: auth.client, userID: auth.user?.id, message: "Loading your saved project update…") } } }
                 .sheet(isPresented: $createProject) { CreateProjectView { project in createdProject = project; Task { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) } } }
                 .sheet(item: $createdProject) { ProjectCreatedView(project: $0) }
                 .task(id: auth.contentIdentity) { await store.load(client: auth.client, userID: auth.user?.id) }.refreshable { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true, message: "Refreshing projects and checking saved progress…") }
@@ -138,14 +138,14 @@ struct ProjectRow: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(project.name).font(.headline)
-                        Text(project.patternName ?? "Pattern").font(.subheadline).foregroundStyle(.secondary)
+                        Text(project.patternName ?? "Pattern").font(.subheadline).foregroundStyle(Color.ink)
                     }
                     Spacer()
                     if project.status == "completed" { Label("Completed", systemImage: "checkmark.seal.fill").font(.caption.weight(.semibold)).foregroundStyle(Color.ink) }
                     else if let craft = project.craft { CraftBadge(craft: craft) }
                 }
                 ProgressView(value: progress).tint(project.status == "completed" ? .ink : .brandOrange)
-                Text(project.status == "completed" ? "Finished project" : "Step \(project.currentInstruction) of \(project.totalInstructions ?? 0)").font(.caption).foregroundStyle(.secondary)
+                Text(project.status == "completed" ? "Finished project" : "Step \(project.currentInstruction) of \(project.totalInstructions ?? 0)").font(.caption).foregroundStyle(Color.ink)
             }
         }
         .padding(.vertical, 6)
@@ -167,6 +167,7 @@ private struct ProjectStateHeader: View {
 
 struct ProjectOverviewView: View {
     @EnvironmentObject private var auth: AuthManager
+    @EnvironmentObject private var sync: OfflineSyncCoordinator
     let project: Project
     let onUpdated: () -> Void
     @State private var detail: ProjectResponse?
@@ -314,7 +315,7 @@ struct ProjectOverviewView: View {
         if auth.isGuest || auth.token == "demo" { isLoading = true; defer { isLoading = false }; detail = ProjectResponse(project: project, instructions: DemoData.instructions(for: project.patternId), notes: DemoData.notes); return }
         guard let userID = auth.user?.id else { return }
         let cached = await AppDataCache.shared.cachedProjectDetail(for: userID, projectID: project.id)
-        if detail == nil, let cached { detail = cached.value }
+        if detail == nil, let cached { detail = cached.value; isCompleted = cached.value.project.status == "completed" }
         if let cached, cached.isFresh() { isLoading = false; return }
         isLoading = detail == nil
         defer { isLoading = false }
@@ -329,10 +330,8 @@ struct ProjectOverviewView: View {
         guard !isCompleting, !isCompleted else { return }
         isCompleting = true; defer { isCompleting = false }
         if auth.token == "demo" { isCompleted = true; onUpdated(); return }
-        struct Body: Encodable { let status = "completed" }
         do {
-            let _: EmptyResponse = try await auth.client.request("/api/projects/\(project.id)", method: "PATCH", body: Body())
-            if let userID = auth.user?.id { await AppDataCache.shared.invalidateProject(for: userID, projectID: project.id) }
+            try await sync.queueCompletion(projectID: project.id, currentInstruction: detail?.project.currentInstruction ?? project.currentInstruction)
             isCompleted = true; onUpdated()
         } catch { self.error = error.localizedDescription }
     }
@@ -377,6 +376,7 @@ private struct ExploreTransformationStep: View {
 
 struct ReaderView: View {
     @EnvironmentObject private var auth: AuthManager
+    @EnvironmentObject private var sync: OfflineSyncCoordinator
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .title3) private var repeatBadgeFontSize: CGFloat = 20
@@ -741,7 +741,12 @@ struct ReaderView: View {
         }
         guard let userID = auth.user?.id else { return }
         let cached = await AppDataCache.shared.cachedProjectDetail(for: userID, projectID: project.id)
-        if instructions.isEmpty, let cached { instructions = cached.value.instructions }
+        if instructions.isEmpty, let cached {
+            instructions = cached.value.instructions
+            if cached.value.instructions.contains(where: { $0.position == cached.value.project.currentInstruction }) {
+                position = cached.value.project.currentInstruction
+            }
+        }
         if let cached, cached.isFresh() { isLoading = false; return }
         isLoading = instructions.isEmpty
         defer { isLoading = false }
@@ -755,10 +760,8 @@ struct ReaderView: View {
         }
         if auth.token == "demo" { UserDefaults.standard.set(position, forKey: DemoData.readerPositionKey(for: project.id)); return }
         isSavingProgress = true; defer { isSavingProgress = false }
-        struct Body: Encodable { let currentInstruction: Int }
         do {
-            let _: EmptyResponse = try await auth.client.request("/api/projects/\(project.id)", method: "PATCH", body: Body(currentInstruction: position))
-            if let userID = auth.user?.id { await AppDataCache.shared.invalidateProject(for: userID, projectID: project.id) }
+            try await sync.queueProgress(projectID: project.id, currentInstruction: position)
             Telemetry.shared.track("reader_progressed")
         } catch { readerError = error.localizedDescription }
     }
@@ -796,10 +799,8 @@ struct ReaderView: View {
         defer { isCompletingProject = false }
         if let lastPosition = currentStep?.lastPosition { position = lastPosition }
         if auth.token != "demo" {
-            struct Body: Encodable { let currentInstruction: Int; let status = "completed" }
             do {
-                let _: EmptyResponse = try await auth.client.request("/api/projects/\(project.id)", method: "PATCH", body: Body(currentInstruction: position))
-                if let userID = auth.user?.id { await AppDataCache.shared.invalidateProject(for: userID, projectID: project.id) }
+                try await sync.queueCompletion(projectID: project.id, currentInstruction: position)
             } catch {
                 readerError = error.localizedDescription
                 return
@@ -820,10 +821,8 @@ struct ReaderView: View {
         }
         guard auth.token != "demo" else { note = ""; showNotes = false; return }
         isSavingNote = true; defer { isSavingNote = false }
-        struct Body: Encodable { let instructionPosition: Int; let body: String }
         do {
-            let _: EmptyResponse = try await auth.client.request("/api/projects/\(project.id)/notes", method: "POST", body: Body(instructionPosition: position, body: note))
-            if let userID = auth.user?.id { await AppDataCache.shared.invalidateProject(for: userID, projectID: project.id) }
+            try await sync.queueNote(projectID: project.id, instructionPosition: position, body: note)
             note = ""; showNotes = false
         } catch { readerError = error.localizedDescription }
     }

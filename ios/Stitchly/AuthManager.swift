@@ -15,26 +15,35 @@ struct AuthenticationRequest: Identifiable, Equatable {
     @Published var errorMessage: String?
     @Published var isWorking = false
     @Published private(set) var isRestoring = false
+    @Published private(set) var restoreError: String?
     @Published var authenticationRequest: AuthenticationRequest?
     private var nonce: String?
     private let keychainKey = "native-session"
+    private let keychainUserKey = "native-session-user"
 
     init() {
-        if ProcessInfo.processInfo.arguments.contains("-resetAuthForUITests") { Keychain.delete(keychainKey) }
+        if ProcessInfo.processInfo.arguments.contains("-resetAuthForUITests") {
+            Keychain.delete(keychainKey)
+            Keychain.delete(keychainUserKey)
+        }
         if ProcessInfo.processInfo.arguments.contains("-resetDemoReaderProgressForUITests") {
             UserDefaults.standard.set(DemoData.project.currentInstruction, forKey: "demoReaderPosition")
         }
         token = Keychain.read(keychainKey)
+        if token != nil, token != "demo", let storedUser = Keychain.read(keychainUserKey)?.data(using: .utf8) {
+            user = try? JSONDecoder().decode(User.self, from: storedUser)
+        }
         if ProcessInfo.processInfo.arguments.contains("-demo") {
             token = "demo"; user = User(id: "demo-user", name: "Luke", email: "luke@example.com")
         }
-        isRestoring = token != nil && token != "demo"
+        isRestoring = token != nil && token != "demo" && user == nil
     }
 
     var client: APIClient { APIClient(token: token) }
     var isGuest: Bool { user == nil }
     var usesGuestDemo: Bool { isGuest || token == "demo" }
     var contentIdentity: String { usesGuestDemo ? "guest" : (user?.id ?? "guest") }
+    var requiresSessionSync: Bool { token != nil && token != "demo" && user == nil }
 
     func requireAuthentication(title: String, message: String) {
         guard isGuest, authenticationRequest == nil else { return }
@@ -45,9 +54,18 @@ struct AuthenticationRequest: Identifiable, Equatable {
 
     func restore() async {
         guard token != nil, token != "demo" else { isRestoring = false; return }
+        restoreError = nil
+        if user == nil { isRestoring = true }
         defer { isRestoring = false }
-        do { let response: SessionResponse = try await client.request("/api/native-auth/session"); user = response.user }
-        catch { await signOutLocally() }
+        do {
+            let response: SessionResponse = try await client.request("/api/native-auth/session")
+            user = response.user
+            storeUser(response.user)
+        } catch APIError.unauthorized {
+            await signOutLocally()
+        } catch {
+            if user == nil { restoreError = error.localizedDescription }
+        }
     }
 
     func prepare(_ request: ASAuthorizationAppleIDRequest) {
@@ -69,6 +87,7 @@ struct AuthenticationRequest: Identifiable, Equatable {
             guard let issuedToken = response.token else { throw APIError.invalidResponse }
             if let previousUserID = user?.id, previousUserID != response.user.id { await AppDataCache.shared.clear(for: previousUserID) }
             token = issuedToken; user = response.user; Keychain.write(issuedToken, key: keychainKey)
+            storeUser(response.user)
             authenticationRequest = nil
         } catch { errorMessage = error.localizedDescription }
     }
@@ -81,6 +100,7 @@ struct AuthenticationRequest: Identifiable, Equatable {
             guard let issuedToken = response.token else { throw APIError.invalidResponse }
             if let previousUserID = user?.id, previousUserID != response.user.id { await AppDataCache.shared.clear(for: previousUserID) }
             token = issuedToken; user = response.user; Keychain.write(issuedToken, key: keychainKey)
+            storeUser(response.user)
             authenticationRequest = nil
         } catch { errorMessage = error.localizedDescription }
     }
@@ -89,7 +109,11 @@ struct AuthenticationRequest: Identifiable, Equatable {
     func deleteAccount() async throws { isWorking = true; defer { isWorking = false }; let _: EmptyResponse = try await client.request("/api/native-auth/account", method: "DELETE"); await signOutLocally() }
     private func signOutLocally() async {
         if let userID = user?.id { await AppDataCache.shared.clear(for: userID) }
-        Keychain.delete(keychainKey); token = nil; user = nil
+        Keychain.delete(keychainKey); Keychain.delete(keychainUserKey); token = nil; user = nil; restoreError = nil
+    }
+    private func storeUser(_ user: User) {
+        guard let data = try? JSONEncoder().encode(user), let value = String(data: data, encoding: .utf8) else { return }
+        Keychain.write(value, key: keychainUserKey)
     }
     private static func sha256(_ value: String) -> String { SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined() }
     private static func randomNonce() -> String { (0..<32).compactMap { _ in "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._".randomElement() }.reduce("") { $0 + String($1) } }

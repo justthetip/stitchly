@@ -123,6 +123,27 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
     }
 }
 
+extension Project {
+    func updating(currentInstruction: Int? = nil, status: String? = nil, at date: Date = Date()) -> Project {
+        let nextStatus = status ?? self.status
+        return Project(
+            id: id,
+            patternId: patternId,
+            name: name,
+            status: nextStatus,
+            yarn: yarn,
+            currentInstruction: currentInstruction ?? self.currentInstruction,
+            patternName: patternName,
+            totalInstructions: totalInstructions,
+            craft: craft,
+            startedAt: startedAt,
+            lastWorkedAt: date,
+            completedAt: nextStatus == "completed" ? (completedAt ?? date) : completedAt,
+            coverUrl: coverUrl
+        )
+    }
+}
+
 struct ProjectNote: Codable, Identifiable, Sendable {
     let id: String
     let instructionPosition: Int?

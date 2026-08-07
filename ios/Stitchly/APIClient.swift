@@ -2,9 +2,14 @@ import Foundation
 
 enum APIError: LocalizedError {
     case invalidResponse
+    case unauthorized
     case server(String)
     var errorDescription: String? {
-        switch self { case .invalidResponse: "The server returned an unexpected response."; case .server(let message): message }
+        switch self {
+        case .invalidResponse: "The server returned an unexpected response."
+        case .unauthorized: "Your secure session has expired. Sign in again to continue."
+        case .server(let message): message
+        }
     }
 }
 
@@ -34,6 +39,7 @@ struct APIClient: Sendable {
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard 200..<300 ~= http.statusCode else {
             let message = (try? JSONDecoder().decode(ServerError.self, from: data).error) ?? "Request failed (\(http.statusCode))."
+            if http.statusCode == 401 { throw APIError.unauthorized }
             throw APIError.server(message)
         }
         if T.self == EmptyResponse.self { return EmptyResponse() as! T }
@@ -54,6 +60,7 @@ struct APIClient: Sendable {
         if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         let (data, response) = try await dataLoader(request)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        if http.statusCode == 401 { throw APIError.unauthorized }
         guard 200..<300 ~= http.statusCode else { throw APIError.server("The private file couldn’t be opened (\(http.statusCode)).") }
         return data
     }

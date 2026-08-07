@@ -17,7 +17,18 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 @main struct StitchlyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var auth = AuthManager()
-    var body: some Scene { WindowGroup { RootView().environmentObject(auth).task { await auth.restore() }.tint(.brandOrange) } }
+    @StateObject private var sync = OfflineSyncCoordinator()
+    @StateObject private var connectivity = ConnectivityObserver()
+    var body: some Scene {
+        WindowGroup {
+            RootView()
+                .environmentObject(auth)
+                .environmentObject(sync)
+                .environmentObject(connectivity)
+                .task { await auth.restore() }
+                .tint(.brandOrange)
+        }
+    }
 }
 
 extension Color {
@@ -30,6 +41,7 @@ extension Color {
 
 struct RootView: View {
     @EnvironmentObject private var auth: AuthManager
+    @EnvironmentObject private var sync: OfflineSyncCoordinator
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("hasShownFirstLaunchSplash") private var hasShownFirstLaunchSplash = false
     private var arguments: [String] { ProcessInfo.processInfo.arguments }
@@ -41,7 +53,8 @@ struct RootView: View {
     var body: some View {
         Group {
             if shouldShowFirstLaunchSplash { BrandedSplashView().task { await finishFirstLaunchSplash() } }
-            else if auth.isRestoring { LoadingStateView(title: "Opening Stitchly", message: "Restoring your secure session and syncing your account.") }
+            else if auth.isRestoring { LoadingStateView(title: "Opening Stitchly", message: "Restoring your secure session and checking this device’s saved account data.") }
+            else if auth.requiresSessionSync { AccountSyncRequiredView() }
             else if shouldShowOnboarding { OnboardingView { hasCompletedOnboarding = true } }
             else if arguments.contains("-showAuthForUITests") { SignInView() }
             else if arguments.contains("-projectOverviewDemo") { NavigationStack { ProjectOverviewView(project: DemoData.projectWithLocalProgress) {} } }
@@ -69,6 +82,9 @@ struct RootView: View {
                 }
             }
             .onChange(of: auth.token, initial: true) { _, _ in Telemetry.shared.configure(client: auth.client) }
+            .onChange(of: auth.user?.id) { previousUserID, userID in
+                if let previousUserID, previousUserID != userID { Task { await sync.clear(userID: previousUserID) } }
+            }
     }
 
     private var shouldShowFirstLaunchSplash: Bool {
@@ -78,6 +94,36 @@ struct RootView: View {
     private func finishFirstLaunchSplash() async {
         try? await Task.sleep(for: BrandedSplashView.minimumDuration)
         hasShownFirstLaunchSplash = true
+    }
+}
+
+private struct AccountSyncRequiredView: View {
+    @EnvironmentObject private var auth: AuthManager
+
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [.cream, .white, .brandBlue.opacity(0.18)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                .ignoresSafeArea()
+            ContentUnavailableView {
+                Label("Connect once to finish signing in", systemImage: "icloud.and.arrow.down")
+                    .foregroundStyle(Color.ink)
+            } description: {
+                Text("This device has your secure session, but it still needs your account identity before private offline data can be opened safely.")
+            } actions: {
+                Button {
+                    Task { await auth.restore() }
+                } label: {
+                    Label("Try account sync again", systemImage: "arrow.clockwise")
+                        .frame(minWidth: 190)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.ink)
+                .controlSize(.large)
+                .disabled(auth.isRestoring)
+                .accessibilityIdentifier("retry-account-sync")
+            }
+        }
+        .accessibilityIdentifier("account-sync-required")
     }
 }
 
@@ -368,12 +414,28 @@ struct SignInView: View {
 }
 
 struct MainTabs: View {
+    @EnvironmentObject private var auth: AuthManager
+    @EnvironmentObject private var sync: OfflineSyncCoordinator
+    @EnvironmentObject private var connectivity: ConnectivityObserver
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selection = ProcessInfo.processInfo.arguments.contains("-libraryDemo") ? 1 : 0
     var body: some View {
         TabView(selection: $selection) {
             Tab("Projects", systemImage: "square.stack.3d.up.fill", value: 0) { ProjectsView { selection = 1 } }
             Tab("Library", systemImage: "books.vertical.fill", value: 1) { LibraryView() }
             Tab("Account", systemImage: "person.crop.circle.fill", value: 2) { AccountView() }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if !auth.isGuest { SyncStatusBanner().padding(.vertical, 6) }
+        }
+        .task(id: auth.contentIdentity) {
+            await sync.activate(userID: auth.usesGuestDemo ? nil : auth.user?.id, client: auth.client)
+        }
+        .onChange(of: connectivity.isOnline) { _, online in
+            if online { Task { await sync.syncNow() } }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await sync.syncNow() } }
         }
     }
 }
@@ -574,5 +636,5 @@ private struct InlineStitchSpinner: View {
 
 struct CraftBadge: View {
     let craft: String
-    var body: some View { Label(craft.capitalized, systemImage: craft == "knit" ? "lines.measurement.horizontal" : "circle.hexagongrid.fill").font(.caption.weight(.semibold)).padding(.horizontal, 10).padding(.vertical, 6).background(Color.brandPink.opacity(0.14), in: .capsule).foregroundStyle(Color.brandPink) }
+    var body: some View { Label(craft.capitalized, systemImage: craft == "knit" ? "lines.measurement.horizontal" : "circle.hexagongrid.fill").font(.caption.weight(.semibold)).padding(.horizontal, 10).padding(.vertical, 6).background(Color.brandPink.opacity(0.14), in: .capsule).foregroundStyle(Color.ink) }
 }

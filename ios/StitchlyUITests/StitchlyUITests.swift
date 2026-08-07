@@ -232,6 +232,19 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Row 11"].waitForExistence(timeout: 8))
     }
 
+    func testOfflineStatusIsVisibleAndAccessibleWithoutBlockingSavedProjects() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-demo", "-projectsDemo", "-simulateOfflineForUITests", "-skipFirstLaunchSplashForUITests"]
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 5))
+        let status = app.descendants(matching: .any)["offline-sync-status"]
+        XCTAssertTrue(status.waitForExistence(timeout: 3))
+        XCTAssertTrue(status.label.contains("Offline"))
+        XCTAssertTrue(app.staticTexts["My Fruity Friends"].isHittable)
+        try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
+    }
+
     func testReaderPhotoSourcesStayPresentedUntilExplicitlyDismissed() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-demo", "-readerDemo", "-resetDemoReaderProgressForUITests", "-mockPhotoPickerForUITests", "-skipFirstLaunchSplashForUITests"]

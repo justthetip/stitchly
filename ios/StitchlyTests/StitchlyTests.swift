@@ -204,6 +204,92 @@ struct StitchlyTests {
         #expect(try await reloadedCache.imageData(for: "maker-b", path: "/cover.png", client: client) == expected)
         #expect(await counter.requestCount == 2)
     }
+
+    @Test func originalPDFsPersistLocallyAndStayAccountScoped() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "StitchlyPDFCacheTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let counter = CacheRequestCounter()
+        let client = APIClient(token: "test") { request in try await counter.assetResponse(for: request) }
+        let expected = Data("cached-cover".utf8)
+
+        let firstCache = AppDataCache(storageDirectory: directory)
+        #expect(try await firstCache.pdfData(for: "maker-a", path: "/original.pdf", client: client) == expected)
+
+        let reloadedCache = AppDataCache(storageDirectory: directory)
+        #expect(try await reloadedCache.pdfData(for: "maker-a", path: "/original.pdf", client: client) == expected)
+        #expect(await counter.requestCount == 1)
+
+        #expect(try await reloadedCache.pdfData(for: "maker-b", path: "/original.pdf", client: client) == expected)
+        #expect(await counter.requestCount == 2)
+    }
+
+    @Test func offlineQueuePersistsSeparatelyAndCoalescesProjectProgress() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "OfflineMutationTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = OfflineMutationStore(storageDirectory: directory)
+
+        _ = try await store.enqueueProgress(userID: "maker-a", projectID: "project", currentInstruction: 2)
+        _ = try await store.enqueueProgress(userID: "maker-a", projectID: "project", currentInstruction: 7)
+        _ = try await store.enqueueNote(userID: "maker-a", projectID: "project", instructionPosition: 7, body: "Use the blue marker")
+        _ = try await store.enqueueProgress(userID: "maker-b", projectID: "project", currentInstruction: 3)
+
+        let reloaded = OfflineMutationStore(storageDirectory: directory)
+        let makerA = await reloaded.pending(for: "maker-a")
+        #expect(makerA.count == 2)
+        #expect(makerA.first?.kind == .projectProgress)
+        #expect(makerA.first?.currentInstruction == 7)
+        #expect(makerA.last?.kind == .projectNote)
+        #expect(await reloaded.pending(for: "maker-b").first?.currentInstruction == 3)
+    }
+
+    @Test func completionSupersedesUnsyncedProgressWithoutDroppingNotes() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "OfflineMutationTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = OfflineMutationStore(storageDirectory: directory)
+
+        _ = try await store.enqueueProgress(userID: "maker", projectID: "project", currentInstruction: 8)
+        let note = try await store.enqueueNote(userID: "maker", projectID: "project", instructionPosition: 8, body: "Changed yarn")
+        _ = try await store.enqueueCompletion(userID: "maker", projectID: "project", currentInstruction: 12)
+
+        let pending = await store.pending(for: "maker")
+        #expect(pending.map(\.kind) == [.projectNote, .projectCompletion])
+        #expect(pending.first?.id == note.id)
+        #expect(pending.last?.currentInstruction == 12)
+    }
+
+    @MainActor @Test func syncReplaysDurableMutationsAndUsesAnIdempotentNoteKey() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "OfflineReplayTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = OfflineMutationStore(storageDirectory: root.appending(path: "queue"))
+        let cache = AppDataCache(storageDirectory: root.appending(path: "cache"))
+        let note = try await store.enqueueNote(userID: "maker", projectID: DemoData.project.id, instructionPosition: 4, body: "Count twice")
+        _ = try await store.enqueueCompletion(userID: "maker", projectID: DemoData.project.id, currentInstruction: 80)
+        let recorder = SyncRequestRecorder()
+        let client = APIClient(token: "test") { request in try await recorder.response(for: request) }
+        let coordinator = OfflineSyncCoordinator(store: store, cache: cache)
+
+        await coordinator.activate(userID: "maker", client: client)
+
+        #expect(coordinator.pendingCount == 0)
+        let requests = await recorder.requests
+        #expect(requests.prefix(2).map(\.path) == ["/api/projects/\(DemoData.project.id)/notes", "/api/projects/\(DemoData.project.id)"])
+        let noteBody = try #require(requests.first?.body)
+        let object = try #require(JSONSerialization.jsonObject(with: noteBody) as? [String: Any])
+        #expect(object["clientMutationId"] as? String == note.id.uuidString)
+    }
+
+    @Test func optimisticProjectChangesPersistForTheNextOfflineLaunch() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "OptimisticCacheTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = AppDataCache(storageDirectory: directory)
+        await cache.store(projects: [DemoData.project], for: "maker")
+        await cache.applyProjectChange(for: "maker", projectID: DemoData.project.id, currentInstruction: 42, status: "completed")
+
+        let reloaded = AppDataCache(storageDirectory: directory)
+        let project = await reloaded.cachedProjects(for: "maker")?.value.first
+        #expect(project?.currentInstruction == 42)
+        #expect(project?.status == "completed")
+    }
 }
 
 private actor CacheRequestCounter {
@@ -221,5 +307,39 @@ private actor CacheRequestCounter {
         requestCount += 1
         let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "image/png"])!
         return (Data("cached-cover".utf8), response)
+    }
+}
+
+private actor SyncRequestRecorder {
+    struct RecordedRequest: Sendable {
+        let path: String
+        let method: String
+        let body: Data?
+    }
+
+    private(set) var requests: [RecordedRequest] = []
+
+    func response(for request: URLRequest) async throws -> (Data, URLResponse) {
+        let path = request.url?.path ?? ""
+        requests.append(RecordedRequest(path: path, method: request.httpMethod ?? "GET", body: request.httpBody))
+        let data: Data
+        let status: Int
+        if request.httpMethod == "GET", path == "/api/projects" {
+            data = try encoder.encode(ProjectListResponse(projects: [DemoData.completedProject]))
+            status = 200
+        } else if request.httpMethod == "GET", path == "/api/projects/\(DemoData.project.id)" {
+            data = try encoder.encode(ProjectResponse(project: DemoData.completedProject, instructions: DemoData.instructions, notes: []))
+            status = 200
+        } else {
+            data = Data("{}".utf8)
+            status = path.hasSuffix("/notes") ? 201 : 200
+        }
+        return (data, HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!)
+    }
+
+    private var encoder: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
     }
 }

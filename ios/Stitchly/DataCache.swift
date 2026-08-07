@@ -166,7 +166,7 @@ actor AppDataCache {
             imageTasks[key] = nil
             imageCache.setObject(data as NSData, forKey: key as NSString, cost: data.count)
             assetKeysByUser[userID, default: []].insert(key)
-            persistImage(data, to: diskURL)
+            persistAsset(data, to: diskURL)
             return data
         } catch {
             imageTasks[key] = nil
@@ -177,6 +177,12 @@ actor AppDataCache {
     func pdfData(for userID: String, path: String, client: APIClient) async throws -> Data {
         let key = assetKey(userID: userID, path: path)
         if let data = pdfCache.object(forKey: key as NSString) { return data as Data }
+        let diskURL = pdfURL(userID: userID, path: path)
+        if let data = try? Data(contentsOf: diskURL), !data.isEmpty {
+            pdfCache.setObject(data as NSData, forKey: key as NSString, cost: data.count)
+            assetKeysByUser[userID, default: []].insert(key)
+            return data
+        }
         if let task = pdfTasks[key] { return try await task.value }
         let task = Task<Data, Error> { try await client.pdfData(path) }
         pdfTasks[key] = task
@@ -185,6 +191,7 @@ actor AppDataCache {
             pdfTasks[key] = nil
             pdfCache.setObject(data as NSData, forKey: key as NSString, cost: data.count)
             assetKeysByUser[userID, default: []].insert(key)
+            persistAsset(data, to: diskURL)
             return data
         } catch {
             pdfTasks[key] = nil
@@ -201,6 +208,33 @@ actor AppDataCache {
     func store(projects: [Project], for userID: String) {
         ensureLoaded(userID)
         snapshots[userID]?.projects = CacheEntry(value: projects, updatedAt: Date())
+        persist(userID)
+    }
+
+    func applyProjectChange(for userID: String, projectID: String, currentInstruction: Int? = nil, status: String? = nil, at date: Date = Date()) {
+        ensureLoaded(userID)
+        if let projects = snapshots[userID]?.projects?.value {
+            let updated = projects.map { project in
+                project.id == projectID ? project.updating(currentInstruction: currentInstruction, status: status, at: date) : project
+            }
+            snapshots[userID]?.projects = CacheEntry(value: updated, updatedAt: date)
+        }
+        if let detail = snapshots[userID]?.projectDetails[projectID]?.value {
+            let updated = ProjectResponse(
+                project: detail.project.updating(currentInstruction: currentInstruction, status: status, at: date),
+                instructions: detail.instructions,
+                notes: detail.notes
+            )
+            snapshots[userID]?.projectDetails[projectID] = CacheEntry(value: updated, updatedAt: date)
+        }
+        persist(userID)
+    }
+
+    func applyProjectNote(for userID: String, projectID: String, note: ProjectNote, at date: Date = Date()) {
+        ensureLoaded(userID)
+        guard let detail = snapshots[userID]?.projectDetails[projectID]?.value else { return }
+        let updated = ProjectResponse(project: detail.project, instructions: detail.instructions, notes: [note] + detail.notes)
+        snapshots[userID]?.projectDetails[projectID] = CacheEntry(value: updated, updatedAt: date)
         persist(userID)
     }
 
@@ -236,6 +270,7 @@ actor AppDataCache {
         }
         try? FileManager.default.removeItem(at: snapshotURL(for: userID))
         try? FileManager.default.removeItem(at: imageDirectory(for: userID))
+        try? FileManager.default.removeItem(at: pdfDirectory(for: userID))
     }
 
     private func ensureLoaded(_ userID: String) {
@@ -277,7 +312,16 @@ actor AppDataCache {
         imageDirectory(for: userID).appending(path: "\(digest(path)).image")
     }
 
-    private func persistImage(_ data: Data, to url: URL) {
+    private func pdfDirectory(for userID: String) -> URL {
+        storageDirectory.appending(path: "pdfs", directoryHint: .isDirectory)
+            .appending(path: digest(userID, byteCount: 12), directoryHint: .isDirectory)
+    }
+
+    private func pdfURL(userID: String, path: String) -> URL {
+        pdfDirectory(for: userID).appending(path: "\(digest(path)).pdf")
+    }
+
+    private func persistAsset(_ data: Data, to url: URL) {
         let directory = url.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var values = URLResourceValues()
