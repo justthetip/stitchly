@@ -15,6 +15,8 @@ The production API is `https://stitchly-application.vercel.app`. Native sessions
 
 Firebase Analytics is integrated through Swift Package Manager and configured at app launch from the bundled `GoogleService-Info.plist`. The app uses Firebase's automatically collected analytics events only; Stitchly does not send pattern text, filenames, notes, account identifiers, or other user content as custom Firebase event parameters.
 
+The repository is linked to its Firebase project through the root `.firebaserc` and `firebase.json`. Authenticate locally with `firebase login`, then use the Xcode launch argument `-FIRDebugEnabled` for a development run and inspect **Analytics → DebugView** in Firebase. Debug events upload with minimal delay; ordinary Analytics events are batched and can take roughly an hour to appear in reports.
+
 ## Release smoke test
 
 1. Install fresh and sign in with Apple.

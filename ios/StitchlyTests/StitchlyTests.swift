@@ -39,6 +39,12 @@ struct StitchlyTests {
         #expect(try ProjectPhotoJournal.load(projectID: "project-a", instructionPosition: 3, directory: directory).count == 1)
         #expect(try ProjectPhotoJournal.load(projectID: "project-b", instructionPosition: 2, directory: directory).count == 1)
     }
+    @MainActor @Test func photoSourcesMapToDistinctPersistentPickerRequests() {
+        #expect(ProjectPhotoSource.allCases == [.camera, .photoLibrary])
+        #expect(ProjectPhotoSource.camera.id != ProjectPhotoSource.photoLibrary.id)
+        #expect(ProjectPhotoSource.camera.uiKitSourceType == .camera)
+        #expect(ProjectPhotoSource.photoLibrary.uiKitSourceType == .photoLibrary)
+    }
     @Test func firstLaunchSplashHasThreeSecondMinimum() { #expect(BrandedSplashView.minimumDuration == .seconds(3)) }
     @Test func instructionsAreGroupedIntoOrderedSections() {
         let sections = DemoData.instructions.patternSections

@@ -1,6 +1,7 @@
 import SwiftUI
 import AuthenticationServices
 import FirebaseCore
+import FirebaseAnalytics
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
@@ -8,6 +9,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         FirebaseApp.configure()
+        Analytics.setAnalyticsCollectionEnabled(true)
         return true
     }
 }

@@ -399,9 +399,7 @@ struct ReaderView: View {
     @State private var stepPhotos: [ProjectStepPhoto] = []
     @State private var selectedPhoto: ProjectStepPhoto?
     @State private var showStepPhotos = false
-    @State private var showPhotoSource = false
-    @State private var showPhotoPicker = false
-    @State private var photoSource: UIImagePickerController.SourceType = .camera
+    @State private var presentedPhotoSource: ProjectPhotoSource?
     @State private var isSavingPhoto = false
     @State private var isDeletingPhoto = false
     let exitTitle: String
@@ -531,17 +529,39 @@ struct ReaderView: View {
                         .foregroundStyle(Color.ink)
                     Text("Capture what step \(position) looks like when it is done, so you can compare your work when you return.")
                         .foregroundStyle(Color.ink)
-                    Button { showPhotoSource = true } label: {
-                        Label(isSavingPhoto ? "Saving photo…" : "Take or choose a photo", systemImage: "camera")
+                    Button { presentedPhotoSource = .camera } label: {
+                        Label(isSavingPhoto ? "Saving photo…" : "Take photo", systemImage: "camera")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.brandPink)
                     .controlSize(.large)
                     .disabled(isSavingPhoto)
-                    .accessibilityIdentifier("reader-add-photo")
+                    .accessibilityIdentifier("reader-photo-camera")
+                    Button { presentedPhotoSource = .photoLibrary } label: {
+                        Label("Choose from library", systemImage: "photo.on.rectangle")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.ink)
+                    .controlSize(.large)
+                    .disabled(isSavingPhoto)
+                    .accessibilityIdentifier("reader-photo-library")
                     if stepPhotos.isEmpty {
-                        ContentUnavailableView("No photos for this step", systemImage: "photo", description: Text("Your first photo will appear here."))
+                        VStack(spacing: 10) {
+                            Image(systemName: "photo")
+                                .font(.largeTitle)
+                                .foregroundStyle(Color.ink)
+                                .accessibilityHidden(true)
+                            Text("No photos for this step")
+                                .font(.headline)
+                                .foregroundStyle(Color.ink)
+                            Text("Your first photo will appear here.")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.ink)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 28)
                     } else {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 110))], spacing: 14) {
                             ForEach(stepPhotos) { photo in
@@ -555,14 +575,21 @@ struct ReaderView: View {
             }
             .navigationTitle("Step \(position) photos")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showStepPhotos = false } } }
-            .fullScreenCover(isPresented: $showPhotoPicker) { ProjectPhotoPicker(sourceType: photoSource, onImage: savePhoto) }
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button { showStepPhotos = false } label: { Image(systemName: "xmark") }
+                        .tint(.ink)
+                        .accessibilityLabel("Close step photos")
+                }
+            }
+            .fullScreenCover(item: $presentedPhotoSource) { source in
+                if ProcessInfo.processInfo.arguments.contains("-mockPhotoPickerForUITests") {
+                    ProjectPhotoPickerTestView(source: source)
+                } else {
+                    ProjectPhotoPicker(source: source, onImage: savePhoto)
+                }
+            }
             .sheet(item: $selectedPhoto) { photo in ProjectPhotoDetailSheet(photo: photo, isDeleting: isDeletingPhoto) { deletePhoto(photo) } }
-            .confirmationDialog("Add a private step photo", isPresented: $showPhotoSource, titleVisibility: .visible) {
-                Button("Take photo", systemImage: "camera") { photoSource = .camera; showPhotoPicker = true }
-                Button("Choose from library", systemImage: "photo.on.rectangle") { photoSource = .photoLibrary; showPhotoPicker = true }
-                Button("Cancel", role: .cancel) {}
-            } message: { Text("The photo will be linked to this exact step and stored only on this device.") }
         }
     }
     @ViewBuilder private var readerHeader: some View {

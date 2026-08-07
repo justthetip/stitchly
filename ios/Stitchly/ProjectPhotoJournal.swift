@@ -11,6 +11,18 @@ struct ProjectStepPhoto: Codable, Identifiable, Hashable, Sendable {
     let filename: String
 }
 
+enum ProjectPhotoSource: String, Identifiable, CaseIterable, Sendable {
+    case camera
+    case photoLibrary
+
+    var id: String { rawValue }
+    var accessibilityName: String { self == .camera ? "camera" : "photo library" }
+
+    @MainActor var uiKitSourceType: UIImagePickerController.SourceType {
+        self == .camera ? .camera : .photoLibrary
+    }
+}
+
 enum ProjectPhotoJournal {
     static func load(projectID: String, instructionPosition: Int, directory: URL? = nil) throws -> [ProjectStepPhoto] {
         try loadAll(projectID: projectID, directory: directory)
@@ -54,7 +66,7 @@ enum ProjectPhotoJournal {
 }
 
 @MainActor struct ProjectPhotoPicker: UIViewControllerRepresentable {
-    let sourceType: UIImagePickerController.SourceType
+    let source: ProjectPhotoSource
     let onImage: (UIImage) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -62,7 +74,8 @@ enum ProjectPhotoJournal {
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.delegate = context.coordinator
-        picker.sourceType = UIImagePickerController.isSourceTypeAvailable(sourceType) ? sourceType : .photoLibrary
+        let requestedSource = source.uiKitSourceType
+        picker.sourceType = UIImagePickerController.isSourceTypeAvailable(requestedSource) ? requestedSource : .photoLibrary
         picker.allowsEditing = false
         return picker
     }
@@ -75,6 +88,27 @@ enum ProjectPhotoJournal {
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             if let image = info[.originalImage] as? UIImage { parent.onImage(image) }
             parent.dismiss()
+        }
+    }
+}
+
+struct ProjectPhotoPickerTestView: View {
+    @Environment(\.dismiss) private var dismiss
+    let source: ProjectPhotoSource
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                Image(systemName: source == .camera ? "camera.fill" : "photo.on.rectangle")
+                    .font(.largeTitle)
+                    .accessibilityHidden(true)
+                Text("Mock \(source.accessibilityName) picker")
+                    .accessibilityIdentifier("mock-photo-picker-\(source.rawValue)")
+                Button("Cancel photo picker") { dismiss() }
+                    .buttonStyle(.borderedProminent)
+            }
+            .padding(24)
+            .navigationTitle("Photo picker")
         }
     }
 }

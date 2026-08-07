@@ -232,6 +232,37 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Row 11"].waitForExistence(timeout: 8))
     }
 
+    func testReaderPhotoSourcesStayPresentedUntilExplicitlyDismissed() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-demo", "-readerDemo", "-resetDemoReaderProgressForUITests", "-mockPhotoPickerForUITests", "-skipFirstLaunchSplashForUITests"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Row 11"].waitForExistence(timeout: 5))
+        app.buttons["reader-step-photos"].tap()
+        XCTAssertTrue(app.navigationBars["Step 4 photos"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["reader-photo-camera"].isHittable)
+        XCTAssertTrue(app.buttons["reader-photo-library"].isHittable)
+        try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .textClipped])
+
+        app.buttons["reader-photo-camera"].tap()
+        let cameraPicker = app.staticTexts["mock-photo-picker-camera"]
+        XCTAssertTrue(cameraPicker.waitForExistence(timeout: 3))
+        let cameraDismissed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: cameraPicker)
+        cameraDismissed.isInverted = true
+        XCTAssertEqual(XCTWaiter.wait(for: [cameraDismissed], timeout: 1), .completed)
+        app.buttons["Cancel photo picker"].tap()
+        XCTAssertTrue(app.navigationBars["Step 4 photos"].waitForExistence(timeout: 3))
+
+        app.buttons["reader-photo-library"].tap()
+        let libraryPicker = app.staticTexts["mock-photo-picker-photoLibrary"]
+        XCTAssertTrue(libraryPicker.waitForExistence(timeout: 3))
+        let libraryDismissed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: libraryPicker)
+        libraryDismissed.isInverted = true
+        XCTAssertEqual(XCTWaiter.wait(for: [libraryDismissed], timeout: 1), .completed)
+        app.buttons["Cancel photo picker"].tap()
+        XCTAssertTrue(app.navigationBars["Step 4 photos"].waitForExistence(timeout: 3))
+    }
+
     func testReaderGroupsRepeatedRowsAndShowsTheWorkedRepeatCount() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-demo", "-readerRepeatDemo", "-skipFirstLaunchSplashForUITests"]
