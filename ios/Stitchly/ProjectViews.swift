@@ -434,7 +434,7 @@ struct ReaderView: View {
                     LoadingStateView(title: "Opening your project", message: "Loading pattern sections, your current step, and saved notes.")
                 } else { ScrollView {
                     LazyVStack(spacing: 18) {
-                        Text(current?.sourceLabel ?? "Step \(position)").font(.title3.weight(.semibold)).foregroundStyle(Color.brandPink)
+                        Text(current?.sourceLabel ?? "Step \(position)").font(.title3.weight(.semibold)).foregroundStyle(Color.ink)
                         if let stitchCount = current?.stitchCount {
                             Label("\(stitchCount) stitches", systemImage: "number")
                                 .font(.headline.weight(.semibold))
@@ -466,17 +466,12 @@ struct ReaderView: View {
                             .padding(20)
                             .background(Color.white, in: .rect(cornerRadius: 20))
                         if let repeatCount = currentStep?.repeatCount {
-                            HStack(spacing: 8) {
-                                Image(systemName: "repeat").accessibilityHidden(true)
-                                Text("×\(repeatCount) repeats").accessibilityHidden(true)
-                            }
+                            Text("Repeat \(repeatCount) times")
                                 .font(.system(size: repeatBadgeFontSize, weight: .bold))
-                                .foregroundStyle(Color.ink)
+                                .foregroundStyle(Color.white)
                                 .padding(.horizontal, 18)
                                 .padding(.vertical, 12)
-                                .background(Color.brandOrange.opacity(0.2), in: .capsule)
-                                .accessibilityElement(children: .ignore)
-                                .accessibilityLabel("Repeat \(repeatCount) times")
+                                .background(Color.ink, in: .capsule)
                                 .accessibilityIdentifier("reader-repeat-count")
                         }
                     }.frame(maxWidth: .infinity).padding(28)
