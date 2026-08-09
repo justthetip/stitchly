@@ -3,6 +3,7 @@
 ## Native scope
 
 - The iOS MVP mirrors the useful web journeys but is not a web-wrapper or pixel copy.
+- Product features ship with web/native parity by default. A platform may use its own native interaction patterns, but any intentional capability or timing difference must be explicitly approved and recorded on the feature ticket.
 - Use native SwiftUI components wherever possible.
 - The bottom navigation uses the platform-native tab bar/liquid-glass presentation.
 - Native authentication is email/password plus Sign in with Apple. Google auth remains available on web only.
@@ -38,5 +39,6 @@
 ## Privacy and review
 
 - User PDFs, extracted pattern content, progress, and notes are private and linked to the account for app functionality.
+- Privacy is a contextual data-handling guarantee, not the core product message. Lead with clearer pattern steps, prepared materials, saved progress, and easier stop/resume workflows; reserve privacy reassurance for upload, account, device-only photo, deletion, and policy contexts.
 - Product interaction, performance, and crash diagnostics may be collected for analytics; no cross-company tracking or tracking domains. Native Firebase Analytics uses its automatic events only and must not receive pattern text, filenames, notes, account identifiers, or other user content as custom parameters.
 - Account deletion must remove the account and user data and remain explicitly confirmed.
