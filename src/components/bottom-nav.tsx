@@ -2,24 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Layers, Plus, UserRound } from "lucide-react";
+import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   {
     href: "/projects",
     label: "Projects",
-    icon: Layers,
+    icon: "/icons/tab-projects.svg",
     match: (p: string) => p.startsWith("/projects"),
   },
   {
     href: "/library",
-    label: "Library",
-    icon: BookOpen,
+    label: "Patterns",
+    icon: "/icons/tab-patterns.svg",
     match: (p: string) => p.startsWith("/library") && p !== "/library/upload",
   },
-  { href: "/library/upload", label: "Add", icon: Plus, match: (p: string) => p === "/library/upload", prominent: true },
-  { href: "/account", label: "You", icon: UserRound, match: (p: string) => p.startsWith("/account") },
+  { href: "/library/upload", label: "Add", match: (p: string) => p === "/library/upload", prominent: true },
+  { href: "/account", label: "Account", icon: "/icons/tab-account.svg", match: (p: string) => p.startsWith("/account") },
 ];
 
 export function BottomNav() {
@@ -33,7 +33,6 @@ export function BottomNav() {
       <div className="relative mx-auto grid max-w-xl grid-cols-4">
         {tabs.map((tab) => {
           const active = tab.match(pathname);
-          const Icon = tab.icon;
           return (
             <Link
               key={tab.href}
@@ -45,10 +44,17 @@ export function BottomNav() {
             >
               {tab.prominent ? (
                 <span className="-mt-10 mb-1 flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background rotate-3">
-                  <Icon className="size-5" strokeWidth={2.5} />
+                  <Plus className="size-5" strokeWidth={2.5} />
                 </span>
               ) : (
-                <Icon className="size-5" strokeWidth={active ? 2.2 : 1.8} />
+                <span
+                  aria-hidden="true"
+                  className="size-6 bg-current"
+                  style={{
+                    WebkitMask: `url(${tab.icon}) center / contain no-repeat`,
+                    mask: `url(${tab.icon}) center / contain no-repeat`,
+                  }}
+                />
               )}
               {tab.label}
             </Link>

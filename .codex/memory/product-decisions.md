@@ -6,6 +6,7 @@
 - Product features ship with web/native parity by default. A platform may use its own native interaction patterns, but any intentional capability or timing difference must be explicitly approved and recorded on the feature ticket.
 - Use native SwiftUI components wherever possible.
 - The bottom navigation uses the platform-native tab bar/liquid-glass presentation.
+- Projects, Patterns, and Account use the shared 28-point black-outline SVG masters under `public/icons/`; iOS ships byte-identical template-image copies so native tint and selection behavior remain authoritative.
 - Native authentication is email/password plus Sign in with Apple. Google auth remains available on web only.
 - Patterns need a complete native overview grouped into source-order sections; alphabetical section sorting is incorrect.
 - The focused reader must let a maker jump directly between sections and persist the selected position.

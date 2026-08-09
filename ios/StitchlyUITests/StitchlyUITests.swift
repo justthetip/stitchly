@@ -367,6 +367,10 @@ import XCTest
         XCTAssertTrue(app.staticTexts["My Mini Whale"].exists)
         XCTAssertTrue(app.staticTexts["Completed"].exists)
         XCTAssertFalse(app.tabBars.buttons["Home"].exists)
+        for label in ["Projects", "Patterns", "Account"] {
+            XCTAssertTrue(app.tabBars.buttons[label].exists)
+            XCTAssertTrue(app.tabBars.buttons[label].isHittable)
+        }
         app.staticTexts["My Fruity Friends"].tap()
         XCTAssertTrue(app.navigationBars["Project overview"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.descendants(matching: .any)["explore-project-transformation"].exists)
