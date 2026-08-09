@@ -22,7 +22,7 @@
 		820FE1B939C7A113D272F14F /* mini-whale-cover.png in Resources */ = {isa = PBXBuildFile; fileRef = 13672D6D5535FB8E3CC60B5A /* mini-whale-cover.png */; };
 		93ADAD6FC413C6DB3C89814D /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815A74C9D4BBFC5D122B0928 /* AccountView.swift */; };
 		9B429D4021B14992165E876F /* ReviewPromptPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA911B0FB4FCFA1FCD537052 /* ReviewPromptPolicy.swift */; };
-		9CE72064D3F66E2C63F6DFDB /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 976F344F3163702F8F654873 /* FirebaseAnalytics */; };
+		9CE72064D3F66E2C63F6DFDB /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = B11A10D036E00E49276CF18C /* FirebaseAnalyticsCore */; };
 		9D18D04834E28D5F7B6F7204 /* StitchlyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB3E3A95E4217D5578C0845 /* StitchlyUITests.swift */; };
 		A74A1F4F5A2F012B8C0BB35C /* fruity-friends.pdf in Resources */ = {isa = PBXBuildFile; fileRef = EF0640D04CA194D1BC9F91C7 /* fruity-friends.pdf */; };
 		AF383C7039C095AE2DAFD4EC /* perfect-granny-square-cover.png in Resources */ = {isa = PBXBuildFile; fileRef = E9C806807DA09DC4D9A4193A /* perfect-granny-square-cover.png */; };
@@ -100,7 +100,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9CE72064D3F66E2C63F6DFDB /* FirebaseAnalytics in Frameworks */,
+				9CE72064D3F66E2C63F6DFDB /* FirebaseAnalyticsCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -241,7 +241,7 @@
 			);
 			name = Stitchly;
 			packageProductDependencies = (
-				976F344F3163702F8F654873 /* FirebaseAnalytics */,
+				B11A10D036E00E49276CF18C /* FirebaseAnalyticsCore */,
 			);
 			productName = Stitchly;
 			productReference = B32F63E003499D6CC7AE4A51 /* Stitchly.app */;
@@ -658,10 +658,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		976F344F3163702F8F654873 /* FirebaseAnalytics */ = {
+		B11A10D036E00E49276CF18C /* FirebaseAnalyticsCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 973FB1F6350E3A54F25E5628 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAnalytics;
+			productName = FirebaseAnalyticsCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

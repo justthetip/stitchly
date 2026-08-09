@@ -40,5 +40,5 @@
 
 - User PDFs, extracted pattern content, progress, and notes are private and linked to the account for app functionality.
 - Privacy is a contextual data-handling guarantee, not the core product message. Lead with clearer pattern steps, prepared materials, saved progress, and easier stop/resume workflows; reserve privacy reassurance for upload, account, device-only photo, deletion, and policy contexts.
-- Product interaction, performance, and crash diagnostics may be collected for analytics; no cross-company tracking or tracking domains. Native Firebase Analytics uses its automatic events only and must not receive pattern text, filenames, notes, account identifiers, or other user content as custom parameters.
+- Product interaction, performance, and crash diagnostics may be collected for analytics; no cross-company tracking or tracking domains. Native Firebase Analytics uses the no-IDFA `FirebaseAnalyticsCore` Swift Package product and its automatic events only; it must not receive pattern text, filenames, notes, account identifiers, or other user content as custom parameters.
 - Account deletion must remove the account and user data and remain explicitly confirmed.

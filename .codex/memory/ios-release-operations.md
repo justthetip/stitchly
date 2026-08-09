@@ -61,6 +61,7 @@ Use `ios/ExportOptions.plist` and the App Store Connect API environment for expo
 - Selecting a build for the App Store version is a separate relationship update.
 - Never replace or cancel a build when the App Store version is `WAITING_FOR_REVIEW`, `IN_REVIEW`, or another locked review state without explicit user direction. A newer build remains a TestFlight/follow-up candidate.
 - Fastlane 2.237.0 may request removed relationships such as `buildDeliveries` or `betaBuildMetrics`. For reliable reads, use the underlying Spaceship Connect API with `includes: nil`.
+- Xcode/App Store Connect may incorrectly request dSYMs for Firebase Analytics' statically linked Swift Package frameworks. Firebase 12.17.0 does not ship UUID-matched dSYMs for `FirebaseAnalytics` or `GoogleAppMeasurement`; never fabricate them or disable the app's symbol upload. Stitchly uses `FirebaseAnalyticsCore`, so `GoogleAdsOnDeviceConversion` and `GoogleAppMeasurementIdentitySupport` must not appear in a fresh archive. Record the two remaining known-static-framework warnings as upstream evidence and re-check Firebase issues 13551, 13764, and 16266 after Xcode or Firebase upgrades.
 - App Store screenshots are 1320×2868 6.7-inch captures under `ios/AppStore/Screenshots/en-US/`. Inspect generated captures before uploading. Use screenshot overwrite only when the full replacement set has been verified locally.
 - The public App Store Connect API does not expose the complete App Privacy nutrition-label questionnaire. Do not claim it is complete based only on the bundled privacy manifest.
 

@@ -50,7 +50,7 @@ targets:
           PROVISIONING_PROFILE_SPECIFIER: com.lukejeffproduct.stitchly AppStore
     dependencies:
       - package: Firebase
-        product: FirebaseAnalytics
+        product: FirebaseAnalyticsCore
     scheme:
       testTargets: [StitchlyTests, StitchlyUITests]
   StitchlyTests:
