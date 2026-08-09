@@ -422,9 +422,10 @@ struct MainTabs: View {
     var body: some View {
         TabView(selection: $selection) {
             Tab("Projects", systemImage: "square.stack.3d.up.fill", value: 0) { ProjectsView { selection = 1 } }
-            Tab("Library", systemImage: "books.vertical.fill", value: 1) { LibraryView() }
+            Tab("Patterns", systemImage: "books.vertical.fill", value: 1) { LibraryView() }
             Tab("Account", systemImage: "person.crop.circle.fill", value: 2) { AccountView() }
         }
+        .tint(.ink)
         .safeAreaInset(edge: .top, spacing: 0) {
             if !auth.isGuest { SyncStatusBanner().padding(.vertical, 6) }
         }

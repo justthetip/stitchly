@@ -81,8 +81,40 @@ struct StitchlyTests {
         #expect(PatternLibraryFiltering.apply(patterns, searchText: "", craft: .all).count == 2)
     }
 
+    @Test func marketplaceContainsFreeAndVariedPaidPatterns() {
+        let listings = PatternMarketplaceCatalog.listings
+        #expect(listings.count >= 8)
+        #expect(listings.contains { $0.price == .free })
+        #expect(listings.contains { $0.price == .paid(pence: 299) })
+        #expect(listings.contains { $0.price == .paid(pence: 750) })
+        #expect(Set(listings.map(\.pattern.craft)) == ["Crochet", "Knit"])
+        #expect(Set(listings.map(\.id)).count == listings.count)
+    }
+
+    @MainActor @Test func marketplaceOwnershipIsAccountScopedAndDeduplicated() {
+        let suite = "PatternMarketplaceTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let listing = PatternMarketplaceCatalog.listings[0]
+
+        #expect(PatternMarketplaceOwnership.acquire(listing.id, for: "maker-a", defaults: defaults))
+        #expect(!PatternMarketplaceOwnership.acquire(listing.id, for: "maker-a", defaults: defaults))
+        #expect(PatternMarketplaceOwnership.acquiredPatterns(for: "maker-a", defaults: defaults).map(\.id) == [listing.id])
+        #expect(PatternMarketplaceOwnership.acquiredPatterns(for: "maker-b", defaults: defaults).isEmpty)
+
+        let merged = PatternCollectionMerging.merge(primary: [listing.pattern], acquired: [listing.pattern])
+        #expect(merged.map(\.id) == [listing.id])
+        PatternMarketplaceOwnership.remove(listing.id, for: "maker-a", defaults: defaults)
+        #expect(PatternMarketplaceOwnership.acquiredIDs(for: "maker-a", defaults: defaults).isEmpty)
+    }
+
     @MainActor @Test func authenticationSwapRemovesDemoContentAndSignOutRestoresIt() async {
         let userID = "empty-maker-\(UUID().uuidString)"
+        PatternMarketplaceOwnership.reset(for: "guest")
+        defer {
+            PatternMarketplaceOwnership.reset(for: "guest")
+            PatternMarketplaceOwnership.reset(for: userID)
+        }
         let emptyClient = APIClient(token: "authenticated-test") { request in
             let path = request.url?.path ?? ""
             let data: Data

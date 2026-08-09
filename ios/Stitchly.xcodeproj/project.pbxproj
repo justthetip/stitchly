@@ -14,6 +14,7 @@
 		463145A1B7737B67AA624168 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */; };
 		49D7B6650ED27275AB1BA9CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5F144145528B63171AD36E0E /* Assets.xcassets */; };
 		58636CA6EB2D83F71D3A3E6F /* DataCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9743005EF2C4DF91DA57169F /* DataCache.swift */; };
+		6399346C8EFA343B220C3E44 /* PatternMarketplace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE5C6EC1AE68DB0710C2293 /* PatternMarketplace.swift */; };
 		6FC376CE71AA58E992857736 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BF2580FCC98BF2993759CA97 /* LaunchScreen.storyboard */; };
 		728E3BC82D2C735FDF02A3F9 /* OriginalPDFView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F558BCE4AE79FB9A1DDC66 /* OriginalPDFView.swift */; };
 		7AAECFC44F62BF501A381C43 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2816538EED2221611A1801B4 /* Models.swift */; };
@@ -71,6 +72,7 @@
 		68EF58EA17CE4C75A76CA17C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		727E57A10CDB5D46186D460C /* ProjectPhotoJournal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectPhotoJournal.swift; sourceTree = "<group>"; };
 		761106EF997B9870971DA39A /* StitchlyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchlyTests.swift; sourceTree = "<group>"; };
+		7CE5C6EC1AE68DB0710C2293 /* PatternMarketplace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternMarketplace.swift; sourceTree = "<group>"; };
 		806CE3EF509AEF3EBB9E2E3A /* StitchlyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = StitchlyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		815A74C9D4BBFC5D122B0928 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		83F84F149B7E2B4A0682623D /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
@@ -146,6 +148,7 @@
 				CF0001CD284F0E186D51EF85 /* OnboardingView.swift */,
 				85F558BCE4AE79FB9A1DDC66 /* OriginalPDFView.swift */,
 				13A2A9754D3328886F9AC713 /* PatternGlossary.swift */,
+				7CE5C6EC1AE68DB0710C2293 /* PatternMarketplace.swift */,
 				4BEEE1B86612F9B9D10FB31A /* PrivacyInfo.xcprivacy */,
 				5D2B54C17927188A7DD5A605 /* ProjectMaterials.swift */,
 				727E57A10CDB5D46186D460C /* ProjectPhotoJournal.swift */,
@@ -343,6 +346,7 @@
 				E57F10F94BAFCC1C429E1253 /* OnboardingView.swift in Sources */,
 				728E3BC82D2C735FDF02A3F9 /* OriginalPDFView.swift in Sources */,
 				BEAFD792437EFC686EA7DAA4 /* PatternGlossary.swift in Sources */,
+				6399346C8EFA343B220C3E44 /* PatternMarketplace.swift in Sources */,
 				EAD9F8F7DB1DE6A434439391 /* ProjectMaterials.swift in Sources */,
 				B1DFE27F7C18E4943DF74373 /* ProjectPhotoJournal.swift in Sources */,
 				E956EED2D8BEB4E1BD75A197 /* ProjectViews.swift in Sources */,

@@ -30,25 +30,30 @@ enum PatternLibraryFiltering {
         loadingMessage = message
         error = nil
         let identity = userID == nil || client.token == "demo" ? "guest" : userID!
+        let acquiredPatterns = PatternMarketplaceOwnership.acquiredPatterns(for: identity)
         if loadedIdentity != identity {
             patterns = []
             loadedIdentity = identity
         }
         if userID == nil || client.token == "demo" {
             isLoading = true; defer { isLoading = false }
-            if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
-            patterns = ProcessInfo.processInfo.arguments.contains("-emptyLibraryDemo") ? [] : DemoData.patterns
+            if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(6)) }
+            let basePatterns = ProcessInfo.processInfo.arguments.contains("-emptyLibraryDemo") ? [] : DemoData.patterns
+            patterns = PatternCollectionMerging.merge(primary: basePatterns, acquired: acquiredPatterns)
             return
         }
         guard let userID else { return }
         let cached = await AppDataCache.shared.cachedPatterns(for: userID)
-        if patterns.isEmpty, let cached { patterns = cached.value }
+        if patterns.isEmpty, let cached { patterns = PatternCollectionMerging.merge(primary: cached.value, acquired: acquiredPatterns) }
         if !forceRefresh, let cached, cached.isFresh() { return }
         let isColdLoad = cached == nil && patterns.isEmpty
         isLoading = isColdLoad
         isRefreshing = !isColdLoad
         defer { isLoading = false; isRefreshing = false }
-        do { patterns = try await AppDataCache.shared.refreshPatterns(for: userID, client: client) }
+        do {
+            let refreshed = try await AppDataCache.shared.refreshPatterns(for: userID, client: client)
+            patterns = PatternCollectionMerging.merge(primary: refreshed, acquired: acquiredPatterns)
+        }
         catch { if patterns.isEmpty { self.error = error.localizedDescription } }
     }
 }
@@ -56,6 +61,7 @@ enum PatternLibraryFiltering {
 struct LibraryView: View {
     @EnvironmentObject private var auth: AuthManager
     @StateObject private var store = LibraryStore()
+    @State private var selectedSection = PatternHubSection.marketplace
     @State private var importing = false
     @State private var showImportIntroduction = false
     @State private var addingExample = false
@@ -68,48 +74,56 @@ struct LibraryView: View {
     @State private var deletionError: String?
     @State private var readyPattern: Pattern?
     @State private var createdProject: Project?
+    @State private var addingListingID: String?
     private var visiblePatterns: [Pattern] { PatternLibraryFiltering.apply(store.patterns, searchText: searchText, craft: craftFilter) }
+    private var visibleMarketplaceListings: [MarketplacePatternListing] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return PatternMarketplaceCatalog.listings.filter { listing in
+            craftFilter.includes(listing.pattern) && (
+                query.isEmpty || listing.pattern.name.localizedCaseInsensitiveContains(query) ||
+                (listing.pattern.designer?.localizedCaseInsensitiveContains(query) ?? false) ||
+                listing.summary.localizedCaseInsensitiveContains(query)
+            )
+        }
+    }
+    private var ownedPatternIDs: Set<String> { Set(store.patterns.map(\.id)) }
+
     var body: some View {
         NavigationStack {
-            Group {
-                if store.isLoading && store.patterns.isEmpty { LoadingStateView(title: "Loading your library", message: store.loadingMessage) }
-                else if store.patterns.isEmpty { ActionableEmptyState(icon: "doc.badge.plus", title: "Bring in your first pattern", message: "Import a PDF and Stitchly will turn its actual instructions into clear steps for review.", actionTitle: "Import a PDF", actionIcon: "doc.badge.plus", isDisabled: store.isLoading || importing, action: beginImport) }
-                else {
-                    VStack(spacing: 0) {
-                        Picker("Craft", selection: $craftFilter) {
-                            ForEach(PatternCraftFilter.allCases) { filter in Text(filter.rawValue).tag(filter) }
-                        }
-                        .pickerStyle(.segmented)
-                        .padding(.horizontal)
-                        .padding(.bottom, 8)
-                        .accessibilityHint("Filters the loaded pattern library by craft")
-                        if visiblePatterns.isEmpty {
-                            ContentUnavailableView {
-                                Label("No matching patterns", systemImage: "magnifyingglass")
-                            } description: {
-                                Text("Try another search or reset the active craft filter.")
-                            } actions: {
-                                Button("Clear search and filters", action: resetFilters)
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(.ink)
-                                    .accessibilityIdentifier("clear-library-filters")
-                            }
-                        } else {
-                            List(visiblePatterns) { pattern in
-                                NavigationLink(value: pattern) { PatternRow(pattern: pattern) }
-                                    .swipeActions {
-                                        Button(role: .destructive) { patternToDelete = pattern } label: { Label("Delete \(pattern.name)", systemImage: "trash") }
-                                            .disabled(deletingPattern)
-                                    }
-                            }.listStyle(.insetGrouped)
-                        }
-                    }
-                    .accessibilityValue("\(visiblePatterns.count) patterns shown")
+            VStack(spacing: 0) {
+                Picker("Pattern collection", selection: $selectedSection) {
+                    ForEach(PatternHubSection.allCases) { section in Text(section.rawValue).tag(section) }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.bottom, 10)
+                .accessibilityIdentifier("patterns-section-picker")
+                .accessibilityHint("Switches between the marketplace and patterns you own")
+
+                Picker("Craft", selection: $craftFilter) {
+                    ForEach(PatternCraftFilter.allCases) { filter in Text(filter.rawValue).tag(filter) }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+                .accessibilityHint("Filters patterns by craft")
+
+                if selectedSection == .marketplace {
+                    marketplaceContent
+                } else {
+                    ownedPatternsContent
                 }
             }
-            .navigationTitle("Library")
+            .navigationTitle("Patterns")
             .searchable(text: $searchText, prompt: "Pattern or designer")
-            .toolbar { ToolbarItem(placement: .primaryAction) { Button("Import", systemImage: "plus", action: beginImport).disabled(store.isLoading || importing) } }
+            .toolbar {
+                if selectedSection == .owned {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Import", systemImage: "plus", action: beginImport)
+                            .disabled(store.isLoading || importing)
+                    }
+                }
+            }
             .navigationDestination(for: Pattern.self) { PatternDetailView(pattern: $0) }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.pdf]) { result in if case .success(let url) = result { Task { await importPDF(url) } } }
             .sheet(isPresented: $showImportIntroduction) {
@@ -123,18 +137,152 @@ struct LibraryView: View {
             }
             .sheet(item: $readyPattern) { pattern in PatternReadyView(pattern: pattern) { project in readyPattern = nil; createdProject = project } }
             .sheet(item: $createdProject) { ProjectCreatedView(project: $0) }
-            .task(id: auth.contentIdentity) { await store.load(client: auth.client, userID: auth.user?.id); if ProcessInfo.processInfo.arguments.contains("-importReviewDemo") { reviewResponse = PatternResponse(pattern: DemoData.pattern, instructions: DemoData.instructions) } }
+            .task(id: auth.contentIdentity) {
+                if ProcessInfo.processInfo.arguments.contains("-resetMarketplaceForUITests") {
+                    PatternMarketplaceOwnership.reset(for: auth.contentIdentity)
+                }
+                await store.load(client: auth.client, userID: auth.user?.id)
+                if ProcessInfo.processInfo.arguments.contains("-importReviewDemo") { reviewResponse = PatternResponse(pattern: DemoData.pattern, instructions: DemoData.instructions) }
+            }
             .refreshable { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) }
             .alert("Couldn’t load library", isPresented: .init(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("Try again") { Task { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) } } } message: { Text(store.error ?? "") }
             .alert("Pattern wasn’t deleted", isPresented: .init(get: { deletionError != nil }, set: { if !$0 { deletionError = nil } })) { Button("OK") {} } message: { Text(deletionError ?? "") }
             .confirmationDialog("Delete this pattern?", isPresented: .init(get: { patternToDelete != nil }, set: { if !$0 { patternToDelete = nil } }), titleVisibility: .visible, presenting: patternToDelete) { pattern in
                 Button("Delete \(pattern.name)", role: .destructive) { Task { await deletePattern(pattern) } }
                 Button("Cancel", role: .cancel) { patternToDelete = nil }
-            } message: { pattern in Text("This permanently deletes \(pattern.name), its PDF, linked projects, progress, and notes.") }
+            } message: { pattern in
+                if PatternMarketplaceOwnership.acquiredIDs(for: auth.contentIdentity).contains(pattern.id) {
+                    Text("This removes the marketplace preview from My Patterns. You can add it again later.")
+                } else {
+                    Text("This permanently deletes \(pattern.name), its PDF, linked projects, progress, and notes.")
+                }
+            }
             .overlay(alignment: .top) { if store.isLoading && !store.patterns.isEmpty { LoadingBanner(message: store.loadingMessage).padding(.top, 8) } }
         }
     }
+
+    private var marketplaceContent: some View {
+        Group {
+            if visibleMarketplaceListings.isEmpty {
+                ContentUnavailableView {
+                    Label("No matching marketplace patterns", systemImage: "magnifyingglass")
+                } description: {
+                    Text("Try another search or reset the active craft filter.")
+                } actions: {
+                    Button("Clear search and filters", action: resetFilters)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.ink)
+                        .accessibilityIdentifier("clear-marketplace-filters")
+                }
+            } else {
+                List {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Find your next make", systemImage: "sparkles")
+                                .font(.title2.bold())
+                                .foregroundStyle(Color.ink)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("Browse free and paid pattern previews, then keep the ones you like alongside your imported PDFs.")
+                                .foregroundStyle(Color.ink)
+                            Label("Preview marketplace — no payment is taken", systemImage: "info.circle.fill")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Color.ink)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("marketplace-no-charge-note")
+                        }
+                        .padding(.vertical, 6)
+                    }
+                    let featured = visibleMarketplaceListings.filter(\.featured)
+                    if !featured.isEmpty {
+                        Section {
+                            ForEach(featured) { listing in marketplaceRow(listing) }
+                        } header: {
+                            Text("Featured")
+                                .font(.headline)
+                                .foregroundStyle(Color.ink)
+                        }
+                        .headerProminence(.increased)
+                    }
+                    let more = visibleMarketplaceListings.filter { !$0.featured }
+                    if !more.isEmpty {
+                        Section {
+                            ForEach(more) { listing in marketplaceRow(listing) }
+                        } header: {
+                            Text("More patterns")
+                                .font(.headline)
+                                .foregroundStyle(Color.ink)
+                        }
+                        .headerProminence(.increased)
+                    }
+                }
+                .listStyle(.insetGrouped)
+                .accessibilityValue("\(visibleMarketplaceListings.count) marketplace patterns shown")
+            }
+        }
+    }
+
+    @ViewBuilder private func marketplaceRow(_ listing: MarketplacePatternListing) -> some View {
+        MarketplacePatternRow(
+            listing: listing,
+            isOwned: ownedPatternIDs.contains(listing.id),
+            isAdding: addingListingID == listing.id
+        ) {
+            Task { await acquire(listing) }
+        }
+    }
+
+    private var ownedPatternsContent: some View {
+        Group {
+            if store.isLoading && store.patterns.isEmpty {
+                LoadingStateView(title: "Loading your patterns", message: store.loadingMessage)
+            } else if store.patterns.isEmpty {
+                ActionableEmptyState(
+                    icon: "doc.badge.plus", title: "No patterns yet",
+                    message: "Add one from the marketplace or import a PDF and Stitchly will turn its actual instructions into clear steps for review.",
+                    actionTitle: "Import a PDF", actionIcon: "doc.badge.plus",
+                    isDisabled: store.isLoading || importing, action: beginImport
+                )
+            } else if visiblePatterns.isEmpty {
+                ContentUnavailableView {
+                    Label("No matching patterns", systemImage: "magnifyingglass")
+                } description: {
+                    Text("Try another search or reset the active craft filter.")
+                } actions: {
+                    Button("Clear search and filters", action: resetFilters)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.ink)
+                        .accessibilityIdentifier("clear-library-filters")
+                }
+            } else {
+                List(visiblePatterns) { pattern in
+                    NavigationLink(value: pattern) { PatternRow(pattern: pattern) }
+                        .swipeActions {
+                            Button(role: .destructive) { patternToDelete = pattern } label: {
+                                Label("Delete \(pattern.name)", systemImage: "trash")
+                            }
+                            .disabled(deletingPattern)
+                        }
+                }
+                .listStyle(.insetGrouped)
+                .accessibilityValue("\(visiblePatterns.count) owned patterns shown")
+            }
+        }
+    }
+
     private func resetFilters() { searchText = ""; craftFilter = .all }
+
+    private func acquire(_ listing: MarketplacePatternListing) async {
+        guard addingListingID == nil, !ownedPatternIDs.contains(listing.id) else { return }
+        addingListingID = listing.id
+        defer { addingListingID = nil }
+        try? await Task.sleep(for: .milliseconds(450))
+        guard !Task.isCancelled else { return }
+        if PatternMarketplaceOwnership.acquire(listing.id, for: auth.contentIdentity) {
+            withAnimation {
+                store.patterns = PatternCollectionMerging.merge(primary: store.patterns, acquired: [listing.pattern])
+            }
+        }
+    }
     private func beginImport() {
         guard !store.isLoading, !importing, !showImportIntroduction else { return }
         guard !auth.isGuest else {
@@ -160,6 +308,17 @@ struct LibraryView: View {
     }
     private func deletePattern(_ pattern: Pattern) async {
         guard !deletingPattern else { return }
+        if PatternMarketplaceOwnership.acquiredIDs(for: auth.contentIdentity).contains(pattern.id) {
+            deletingPattern = true; patternToDelete = nil
+            store.loadingMessage = "Removing \(pattern.name) from My Patterns…"
+            store.isLoading = true
+            defer { deletingPattern = false; store.isLoading = false }
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            PatternMarketplaceOwnership.remove(pattern.id, for: auth.contentIdentity)
+            store.patterns.removeAll { $0.id == pattern.id }
+            return
+        }
         guard !auth.isGuest else {
             patternToDelete = nil
             auth.requireAuthentication(title: "Sign in to manage patterns", message: "The starter catalog is read-only. Create an account to add and manage your own private patterns.")
@@ -326,6 +485,83 @@ struct PatternRow: View {
     }
 }
 
+private struct MarketplacePatternRow: View {
+    let listing: MarketplacePatternListing
+    let isOwned: Bool
+    let isAdding: Bool
+    let acquire: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    LinearGradient(
+                        colors: listing.featured ? [.brandPink.opacity(0.75), .brandOrange.opacity(0.82)] : [.brandBlue.opacity(0.75), .cream],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    Image(systemName: listing.symbol)
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(Color.ink)
+                }
+                .frame(width: 76, height: 76)
+                .clipShape(.rect(cornerRadius: 18))
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(listing.pattern.name)
+                            .font(.headline)
+                            .foregroundStyle(Color.ink)
+                        Spacer(minLength: 8)
+                        Text(listing.price.displayName)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(Color.ink)
+                    }
+                    if let designer = listing.pattern.designer {
+                        Text("by \(designer)")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.ink)
+                    }
+                    Text(listing.summary)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text([listing.pattern.craft, listing.pattern.difficulty].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.ink)
+                }
+            }
+
+            if isOwned {
+                Label("In My Patterns", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.ink)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(Color.brandBlue.opacity(0.22), in: .rect(cornerRadius: 12))
+                    .accessibilityIdentifier("marketplace-owned-\(listing.id)")
+            } else {
+                Button(action: acquire) {
+                    if isAdding {
+                        LoadingButtonLabel("Adding \(listing.pattern.name)…")
+                    } else {
+                        Label(listing.price.acquisitionTitle, systemImage: listing.price == .free ? "arrow.down.circle" : "plus.circle")
+                            .frame(maxWidth: .infinity, minHeight: 24)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.ink)
+                .controlSize(.large)
+                .disabled(isAdding)
+                .accessibilityIdentifier("marketplace-add-\(listing.id)")
+                .accessibilityHint("Adds this preview pattern to My Patterns. No payment is taken.")
+            }
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .contain)
+    }
+}
+
 struct ListCoverThumbnail: View {
     let path: String?
     let fallbackAsset: String
@@ -392,6 +628,7 @@ struct PatternDetailView: View {
     @State private var showOriginal = false
     @State private var createdProject: Project?
     @State private var selectedGlossaryTerm: PatternGlossaryTerm?
+    private var marketplaceListing: MarketplacePatternListing? { PatternMarketplaceCatalog.listing(for: pattern.id) }
     var body: some View {
         List {
             Section {
@@ -402,10 +639,26 @@ struct PatternDetailView: View {
                         .accessibilityIdentifier("pattern-overview-cover")
                     CraftBadge(craft: pattern.craft)
                     Text(pattern.name).font(.largeTitle.bold())
-                    if let designer = pattern.designer { Text("by \(designer)").foregroundStyle(.secondary) }
-                    HStack { if let yarn = pattern.yarn { Label(yarn, systemImage: "circle.fill") }; if let tool = pattern.tool { Label(tool, systemImage: "wrench.and.screwdriver") } }.font(.subheadline).foregroundStyle(.secondary)
-                    Button { beginProject() } label: { Label("Start a project", systemImage: "plus").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).accessibilityIdentifier("start-pattern-project")
-                    Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext").frame(maxWidth: .infinity) }.buttonStyle(.bordered).tint(.ink).controlSize(.large).accessibilityIdentifier("pattern-original-pdf")
+                    if let designer = pattern.designer {
+                        Text("by \(designer)")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.ink)
+                    }
+                    HStack { if let yarn = pattern.yarn { Label(yarn, systemImage: "circle.fill") }; if let tool = pattern.tool { Label(tool, systemImage: "wrench.and.screwdriver") } }
+                        .font(.subheadline)
+                        .foregroundStyle(Color.ink)
+                    if marketplaceListing == nil {
+                        Button { beginProject() } label: { Label("Start a project", systemImage: "plus").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).accessibilityIdentifier("start-pattern-project")
+                        Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext").frame(maxWidth: .infinity) }.buttonStyle(.bordered).tint(.ink).controlSize(.large).accessibilityIdentifier("pattern-original-pdf")
+                    } else {
+                        Label("Marketplace preview", systemImage: "storefront.fill")
+                            .font(.headline)
+                            .foregroundStyle(Color.ink)
+                        Text("This mocked listing includes a short preview. Checkout, the complete source pattern, and project creation will be connected in a later marketplace release.")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.ink)
+                            .accessibilityIdentifier("marketplace-pattern-preview-note")
+                    }
                 }.padding(.vertical)
             }
             if isLoading { Section { LoadingBanner(message: "Loading sections and laying out each instruction…").frame(maxWidth: .infinity) } }
@@ -417,7 +670,7 @@ struct PatternDetailView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(term.shorthand).font(.headline).foregroundStyle(Color.ink)
-                                    Text(term.name).font(.subheadline).foregroundStyle(.secondary)
+                                    Text(term.name).font(.subheadline).foregroundStyle(Color.ink)
                                 }
                                 Spacer()
                                 Image(systemName: "questionmark.circle").foregroundStyle(Color.brandPink)
@@ -432,17 +685,21 @@ struct PatternDetailView: View {
                 Section {
                     ForEach(patternSection.instructions) { instruction in
                         VStack(alignment: .leading, spacing: 6) {
-                            HStack { Text(instruction.sourceLabel ?? "Step \(instruction.position)").font(.headline); Spacer(); Text("Step \(instruction.position)").font(.caption).foregroundStyle(.secondary) }
-                            Text(instruction.instructions).foregroundStyle(.secondary)
+                            HStack { Text(instruction.sourceLabel ?? "Step \(instruction.position)").font(.headline); Spacer(); Text("Step \(instruction.position)").font(.caption).foregroundStyle(Color.ink) }
+                            Text(instruction.instructions).foregroundStyle(Color.ink)
                             if let notes = instruction.notes { Label(notes, systemImage: "lightbulb").font(.callout).foregroundStyle(Color.ink) }
                         }.padding(.vertical, 4)
                     }
                 } header: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(patternSection.title)
-                        Text("Steps \(patternSection.firstPosition)–\(patternSection.lastPosition) · \(patternSection.instructions.count) instructions").font(.caption).textCase(nil)
+                        Text(patternSection.title).foregroundStyle(Color.ink)
+                        Text("Steps \(patternSection.firstPosition)–\(patternSection.lastPosition) · \(patternSection.instructions.count) instructions")
+                            .font(.caption)
+                            .foregroundStyle(Color.ink)
+                            .textCase(nil)
                     }.accessibilityElement(children: .combine)
                 }
+                .headerProminence(.increased)
             }
         }
         .navigationTitle("Pattern overview")
@@ -455,6 +712,13 @@ struct PatternDetailView: View {
         .alert("Couldn’t open pattern", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("Try again") { Task { await load() } } } message: { Text(error ?? "") }
     }
     private func load() async {
+        if let previewInstructions = PatternMarketplaceCatalog.instructions(for: pattern.id) {
+            isLoading = true
+            defer { isLoading = false }
+            if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
+            instructions = previewInstructions
+            return
+        }
         if auth.isGuest || auth.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }

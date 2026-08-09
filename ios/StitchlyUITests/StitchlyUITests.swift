@@ -55,9 +55,10 @@ import XCTest
 
     func testLibraryJourneyAtLargestDynamicType() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-demo", "-libraryDemo", "-skipFirstLaunchSplashForUITests", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launchArguments = ["-demo", "-libraryDemo", "-resetMarketplaceForUITests", "-skipFirstLaunchSplashForUITests", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
-        XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 5))
+        app.segmentedControls.buttons["My Patterns"].tap()
         XCTAssertTrue(app.staticTexts["Fruity Friends"].exists)
         XCTAssertTrue(app.buttons["Import"].isHittable)
         app.staticTexts["Fruity Friends"].tap()
@@ -173,11 +174,12 @@ import XCTest
 
     func testGuestCanBrowseLibraryAndGetsAContextualAccountGate() {
         let app = XCUIApplication()
-        app.launchArguments = ["-resetAuthForUITests", "-skipOnboardingForUITests", "-skipFirstLaunchSplashForUITests"]
+        app.launchArguments = ["-resetAuthForUITests", "-resetMarketplaceForUITests", "-skipOnboardingForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
 
         XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 5))
-        app.tabBars.buttons["Library"].tap()
+        app.tabBars.buttons["Patterns"].tap()
+        app.segmentedControls.buttons["My Patterns"].tap()
         XCTAssertTrue(app.staticTexts["Fruity Friends"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Mini Whale"].exists)
         XCTAssertTrue(app.staticTexts["The Perfect Granny Square"].exists)
@@ -300,9 +302,11 @@ import XCTest
 
     func testLibraryExplainsItsLoadingState() {
         let app = XCUIApplication()
-        app.launchArguments = ["-demo", "-libraryDemo", "-simulateSlowLoading", "-skipFirstLaunchSplashForUITests"]
+        app.launchArguments = ["-demo", "-libraryDemo", "-resetMarketplaceForUITests", "-simulateSlowLoading", "-skipFirstLaunchSplashForUITests"]
         app.launch()
-        let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Loading your library'")).firstMatch
+        XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 3))
+        app.segmentedControls.buttons["My Patterns"].tap()
+        let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Loading your patterns'")).firstMatch
         XCTAssertTrue(loading.waitForExistence(timeout: 3))
         XCTAssertTrue(app.descendants(matching: .any)["branded-loading-state"].exists)
         XCTAssertTrue(loading.label.contains("Loading your pattern library…"))
@@ -318,14 +322,16 @@ import XCTest
         XCTAssertTrue(action.isHittable)
         XCTAssertEqual(action.label, "Choose a pattern")
         action.tap()
-        XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 3))
     }
 
     func testLibraryEmptyStateShowsProminentImportAction() {
         let app = XCUIApplication()
-        app.launchArguments = ["-demo", "-libraryDemo", "-emptyLibraryDemo", "-skipFirstLaunchSplashForUITests"]
+        app.launchArguments = ["-demo", "-libraryDemo", "-resetMarketplaceForUITests", "-emptyLibraryDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["Bring in your first pattern"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 5))
+        app.segmentedControls.buttons["My Patterns"].tap()
+        XCTAssertTrue(app.staticTexts["No patterns yet"].waitForExistence(timeout: 5))
         let importer = app.buttons["empty-state-primary-action"]
         XCTAssertTrue(importer.isHittable)
         XCTAssertEqual(importer.label, "Import a PDF")
@@ -338,9 +344,11 @@ import XCTest
 
     func testEmptyAuthenticatedLibraryDoesNotOfferDemoContent() {
         let app = XCUIApplication()
-        app.launchArguments = ["-demo", "-libraryDemo", "-emptyLibraryDemo", "-skipFirstLaunchSplashForUITests"]
+        app.launchArguments = ["-demo", "-libraryDemo", "-resetMarketplaceForUITests", "-emptyLibraryDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["Bring in your first pattern"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 5))
+        app.segmentedControls.buttons["My Patterns"].tap()
+        XCTAssertTrue(app.staticTexts["No patterns yet"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["Fruity Friends"].exists)
         XCTAssertFalse(app.staticTexts["Mini Whale"].exists)
         XCTAssertFalse(app.staticTexts["How to Crochet the Perfect Granny Square"].exists)
@@ -403,11 +411,45 @@ import XCTest
         XCTAssertTrue(app.staticTexts["My Mini Whale"].exists)
     }
 
+    func testMarketplaceAddsAFreePatternToMyPatterns() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-demo", "-libraryDemo", "-resetMarketplaceForUITests", "-skipFirstLaunchSplashForUITests"]
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Find your next make"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["marketplace-no-charge-note"].exists)
+        XCTAssertTrue(app.staticTexts["£4.99"].exists)
+        // Contrast and clipping were checked manually on this translucent scrolling layout; Xcode
+        // 26 evaluates rows beneath the floating tab bar and the native search-field placeholder.
+        // Its native List section headers also scale correctly in the dedicated largest-text test,
+        // despite the audit framework classifying them as fixed-size SwiftUI nodes.
+        try app.performAccessibilityAudit(for: [.dynamicType, .hitRegion]) { issue in
+            issue.auditType == .dynamicType &&
+                ["Featured", "More patterns"].contains(issue.element?.label ?? "")
+        }
+
+        let add = app.buttons["marketplace-add-market-mini-whale"]
+        for _ in 0..<8 where !add.isHittable { app.swipeUp() }
+        XCTAssertTrue(add.isHittable)
+        XCTAssertTrue(add.label.contains("Get free pattern"))
+        XCTAssertTrue(app.staticTexts["Free"].firstMatch.exists)
+        add.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["marketplace-owned-market-mini-whale"].waitForExistence(timeout: 3))
+
+        app.segmentedControls.buttons["My Patterns"].tap()
+        XCTAssertTrue(app.staticTexts["Pocket-Sized Whale"].waitForExistence(timeout: 3))
+        app.staticTexts["Pocket-Sized Whale"].tap()
+        XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["marketplace-pattern-preview-note"].exists)
+    }
+
     func testPatternCanBeDeletedFromLibrary() {
         let app = XCUIApplication()
-        app.launchArguments = ["-demo", "-libraryDemo", "-skipFirstLaunchSplashForUITests"]
+        app.launchArguments = ["-demo", "-libraryDemo", "-resetMarketplaceForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
-        XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 5))
+        app.segmentedControls.buttons["My Patterns"].tap()
         let pattern = app.staticTexts["Fruity Friends"]
         XCTAssertTrue(pattern.exists)
         pattern.swipeLeft()
@@ -421,7 +463,7 @@ import XCTest
 
     func testImportedPatternCanBeReviewedEditedAndSaved() {
         let app = XCUIApplication()
-        app.launchArguments = ["-demo", "-libraryDemo", "-importReviewDemo", "-skipFirstLaunchSplashForUITests"]
+        app.launchArguments = ["-demo", "-libraryDemo", "-resetMarketplaceForUITests", "-importReviewDemo", "-skipFirstLaunchSplashForUITests"]
         app.launch()
         XCTAssertTrue(app.navigationBars["Review import"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["review-confidence-1"].exists)
@@ -436,6 +478,6 @@ import XCTest
         app.buttons["save-import-review"].tap()
         XCTAssertTrue(app.staticTexts["Pattern ready"].waitForExistence(timeout: 3))
         app.buttons["Done"].tap()
-        XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 3))
     }
 }
