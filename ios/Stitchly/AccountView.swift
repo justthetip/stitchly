@@ -4,6 +4,7 @@ struct AccountView: View {
     @EnvironmentObject private var auth: AuthManager
     @EnvironmentObject private var sync: OfflineSyncCoordinator
     @EnvironmentObject private var connectivity: ConnectivityObserver
+    @Environment(\.openURL) private var openURL
     @State private var confirmDelete = false
     @State private var confirmDiscardingPendingChanges = false
     @State private var isPreparingSignOut = false
@@ -12,7 +13,7 @@ struct AccountView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section { HStack(spacing: 14) { Image(systemName: "person.crop.circle.fill").font(.system(size: 48)).foregroundStyle(Color.brandPink); VStack(alignment: .leading) { Text(auth.user?.name ?? "Exploring as a guest").font(.headline); if let email = auth.user?.email { Text(email).font(.subheadline).foregroundStyle(.secondary) } else { Text("Browse the demo, then create an account when you want to save.").font(.subheadline).foregroundStyle(.secondary) } } }.padding(.vertical, 8) }
+                Section { HStack(spacing: 14) { Image(systemName: "person.crop.circle.fill").font(.system(size: 48)).foregroundStyle(Color.brandPink); VStack(alignment: .leading) { Text(auth.user?.name ?? "Exploring as a guest").font(.headline); if let email = auth.user?.email { Text(email).font(.subheadline).foregroundStyle(Color.ink) } else { Text("Browse the demo, then create an account when you want to save.").font(.subheadline).foregroundStyle(Color.ink) } } }.padding(.vertical, 8) }
                 if auth.isGuest {
                     Section {
                         Button("Sign in or create account", systemImage: "person.crop.circle.badge.plus") {
@@ -21,9 +22,35 @@ struct AccountView: View {
                         .accessibilityIdentifier("guest-account-action")
                     }
                 } else {
-                    Section { Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right") { Task { await prepareToSignOut() } }.disabled(auth.isWorking || isPreparingSignOut); Button("Delete account", systemImage: "trash", role: .destructive) { confirmDelete = true }.disabled(auth.isWorking || isPreparingSignOut) }
+                    Section {
+                        Button { Task { await prepareToSignOut() } } label: {
+                            externalLinkLabel("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                        }
+                            .disabled(auth.isWorking || isPreparingSignOut)
+                        Button(role: .destructive) { confirmDelete = true } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "trash").accessibilityHidden(true)
+                                Text("Delete account")
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                        .accessibilityLabel("Delete account")
+                        .foregroundStyle(Color.accessibleDestructive)
+                        .tint(.accessibleDestructive)
+                        .disabled(auth.isWorking || isPreparingSignOut)
+                    }
                 }
-                Section { LabeledContent("Version", value: "1.0.0"); Link("Privacy policy", destination: APIClient.baseURL.appending(path: "/privacy")); Link("Support", destination: APIClient.baseURL.appending(path: "/support")) }
+                Section {
+                    LabeledContent { Text("1.0.0").foregroundStyle(Color.ink) } label: { Text("Version") }
+                    Button { openURL(APIClient.baseURL.appending(path: "/privacy")) } label: {
+                        externalLinkLabel("Privacy policy", systemImage: "hand.raised")
+                    }
+                    Button { openURL(APIClient.baseURL.appending(path: "/support")) } label: {
+                        externalLinkLabel("Support", systemImage: "questionmark.circle")
+                    }
+                }
             }.navigationTitle("Account")
                 .disabled(auth.isWorking)
                 .overlay(alignment: .top) { if auth.isWorking { LoadingBanner(message: operationMessage).padding(.top, 8) } }
@@ -44,6 +71,18 @@ struct AccountView: View {
                 .confirmationDialog("Delete your Stitchly account?", isPresented: $confirmDelete, titleVisibility: .visible) { Button("Delete account and data", role: .destructive) { operationMessage = "Deleting your patterns, projects, notes, and account…"; Task { do { try await auth.deleteAccount() } catch { deletionError = error.localizedDescription } } } } message: { Text("This permanently deletes your patterns, projects, notes, and sign-in connection.") }
                 .alert("Account wasn’t deleted", isPresented: .init(get: { deletionError != nil }, set: { if !$0 { deletionError = nil } })) { Button("OK") {} } message: { Text(deletionError ?? "") }
         }
+    }
+
+    private func externalLinkLabel(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage).accessibilityHidden(true)
+            Text(title)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
     }
 
     private func prepareToSignOut() async {

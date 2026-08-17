@@ -121,34 +121,73 @@ struct ProjectsView: View {
 }
 
 struct ProjectRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let project: Project
     var progress: Double { Double(project.currentInstruction) / Double(max(project.totalInstructions ?? 1, 1)) }
     var body: some View {
-        HStack(spacing: 12) {
-            ListCoverThumbnail(path: project.coverUrl, fallbackAsset: "ProjectFallback", size: 64)
-            VStack(alignment: .leading, spacing: 8) {
-                if DemoData.isDemoProject(project.id) {
-                    Label("DEMO PROJECT", systemImage: "sparkles")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Color.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.brandPink, in: .capsule)
-                }
-                HStack {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(project.name).font(.headline)
-                        Text(project.patternName ?? "Pattern").font(.subheadline).foregroundStyle(Color.ink)
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 12) {
+                    demoBadge
+                    HStack(alignment: .top, spacing: 12) {
+                        ListCoverThumbnail(path: project.coverUrl, fallbackAsset: "ProjectFallback", size: 72)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(project.name).font(.headline)
+                            Text(project.patternName ?? "Pattern").font(.subheadline).foregroundStyle(Color.ink)
+                        }
                     }
-                    Spacer()
-                    if project.status == "completed" { Label("Completed", systemImage: "checkmark.seal.fill").font(.caption.weight(.semibold)).foregroundStyle(Color.ink) }
-                    else if let craft = project.craft { CraftBadge(craft: craft) }
+                    projectState
+                    ProgressView(value: progress).tint(project.status == "completed" ? .brandInteractive : .brandOrange)
+                    progressLabel
                 }
-                ProgressView(value: progress).tint(project.status == "completed" ? .ink : .brandOrange)
-                Text(project.status == "completed" ? "Finished project" : "Step \(project.currentInstruction) of \(project.totalInstructions ?? 0)").font(.caption).foregroundStyle(Color.ink)
+            } else {
+                HStack(spacing: 12) {
+                    ListCoverThumbnail(path: project.coverUrl, fallbackAsset: "ProjectFallback", size: 64)
+                    VStack(alignment: .leading, spacing: 8) {
+                        demoBadge
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(project.name).font(.headline)
+                                Text(project.patternName ?? "Pattern").font(.subheadline).foregroundStyle(Color.ink)
+                            }
+                            Spacer()
+                            projectState
+                        }
+                        ProgressView(value: progress).tint(project.status == "completed" ? .brandInteractive : .brandOrange)
+                        progressLabel
+                    }
+                }
             }
         }
         .padding(.vertical, 6)
+    }
+
+    @ViewBuilder private var demoBadge: some View {
+        if DemoData.isDemoProject(project.id) {
+            Label("DEMO PROJECT", systemImage: "sparkles")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Color.onBrandPink)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.brandPink, in: .capsule)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder private var projectState: some View {
+        if project.status == "completed" {
+            Label("Completed", systemImage: "checkmark.seal.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.ink)
+        } else if let craft = project.craft {
+            CraftBadge(craft: craft)
+        }
+    }
+
+    private var progressLabel: some View {
+        Text(project.status == "completed" ? "Finished project" : "Step \(project.currentInstruction) of \(project.totalInstructions ?? 0)")
+            .font(.caption)
+            .foregroundStyle(Color.ink)
     }
 }
 
@@ -354,9 +393,9 @@ private struct ExploreTransformationStep: View {
         HStack(alignment: .top, spacing: 12) {
             Text("\(number)")
                 .font(.caption.bold())
-                .foregroundStyle(Color.white)
+                .foregroundStyle(number == 3 ? Color.onBrandPink : Color.white)
                 .frame(width: 26, height: 26)
-                .background(number == 3 ? Color.brandPink : Color.ink, in: .circle)
+                .background(number == 3 ? Color.brandPink : Color.brandAction, in: .circle)
                 .accessibilityHidden(true)
             Image(systemName: icon)
                 .font(.headline)
@@ -420,7 +459,7 @@ struct ReaderView: View {
     private var isGuestDemo: Bool { (auth.isGuest || auth.token == "demo") && DemoData.isDemoProject(project.id) }
     var body: some View {
         ZStack {
-            LinearGradient(colors: [.cream.opacity(0.65), .white], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+            LinearGradient(colors: [.cream.opacity(0.65), .surface], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             VStack(spacing: 0) {
                 readerHeader.padding()
                 ProgressView(value: Double(currentStepIndex + 1), total: Double(max(steps.count, 1))).tint(.brandOrange).padding(.horizontal).accessibilityHidden(true)
@@ -441,14 +480,14 @@ struct ReaderView: View {
                                 .foregroundStyle(Color.ink)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
-                                .background(Color.white, in: .capsule)
+                                .background(Color.elevatedSurface, in: .capsule)
                         }
                         Button { showStepPhotos = true } label: {
                             Label(stepPhotos.isEmpty ? "Add a private step photo" : "Step photos (\(stepPhotos.count))", systemImage: "camera.fill")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(.ink)
+                        .tint(.brandAction)
                         .controlSize(.large)
                         .accessibilityIdentifier("reader-step-photos")
                         if let notes = current?.notes {
@@ -464,14 +503,14 @@ struct ReaderView: View {
                             .multilineTextAlignment(.center)
                             .lineSpacing(8)
                             .padding(20)
-                            .background(Color.white, in: .rect(cornerRadius: 20))
+                            .background(Color.elevatedSurface, in: .rect(cornerRadius: 20))
                         if let repeatCount = currentStep?.repeatCount {
                             Text("Repeat \(repeatCount) times")
                                 .font(.system(size: repeatBadgeFontSize, weight: .bold))
                                 .foregroundStyle(Color.white)
                                 .padding(.horizontal, 18)
                                 .padding(.vertical, 12)
-                                .background(Color.ink, in: .capsule)
+                                .background(Color.brandAction, in: .capsule)
                                 .accessibilityIdentifier("reader-repeat-count")
                         }
                     }.frame(maxWidth: .infinity).padding(28)
@@ -545,7 +584,7 @@ struct ReaderView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
-                    .tint(.ink)
+                    .tint(.brandAction)
                     .controlSize(.large)
                     .disabled(isSavingPhoto)
                     .accessibilityIdentifier("reader-photo-library")
@@ -580,7 +619,7 @@ struct ReaderView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button { showStepPhotos = false } label: { Image(systemName: "xmark") }
-                        .tint(.ink)
+                        .tint(.brandAction)
                         .accessibilityLabel("Close step photos")
                 }
             }
@@ -636,7 +675,7 @@ struct ReaderView: View {
             .padding(.horizontal, 11)
             .padding(.vertical, 7)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white, in: .rect(cornerRadius: 14))
+            .background(Color.elevatedSurface, in: .rect(cornerRadius: 14))
         }
         .buttonStyle(.plain)
         .disabled(isLoading || instructions.patternSections.isEmpty)
@@ -648,10 +687,10 @@ struct ReaderView: View {
         Text("Step \(currentStepIndex + 1) of \(max(steps.count, 1))")
             .font(.subheadline.bold())
             .monospacedDigit()
-            .foregroundStyle(.black)
+            .foregroundStyle(.primary)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(Color.white, in: .capsule)
+            .background(Color.elevatedSurface, in: .capsule)
     }
     @ViewBuilder private var readerControls: some View {
         if dynamicTypeSize.isAccessibilitySize {
@@ -666,14 +705,15 @@ struct ReaderView: View {
                 Label("Previous", systemImage: "chevron.left")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
+            .buttonStyle(.borderedProminent).tint(.brandAction).controlSize(.large)
             .disabled(isLoading || isSavingProgress || isCompletingProject)
         }
         Button { advance() } label: {
             Label(isAtLastStep ? (hasCompletedProject ? "Done" : "Finish project") : "Next", systemImage: isAtLastStep ? "checkmark.circle.fill" : "chevron.right")
                 .frame(maxWidth: .infinity)
+                .foregroundStyle(isAtLastStep ? Color.onBrandPink : Color.white)
         }
-        .buttonStyle(.borderedProminent).tint(isAtLastStep ? .brandPink : .ink).controlSize(.large)
+        .buttonStyle(.borderedProminent).tint(isAtLastStep ? .brandPink : .brandAction).controlSize(.large)
         .disabled(isLoading || isSavingProgress || isCompletingProject || steps.isEmpty)
     }
     private func exitReader() {
@@ -709,7 +749,7 @@ struct ReaderView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { showSections = false } label: { Image(systemName: "xmark") }
-                        .tint(.ink)
+                        .tint(.brandAction)
                         .accessibilityLabel("Close sections")
                 }
             }
@@ -855,7 +895,7 @@ struct ReaderView: View {
                         Label("Done", systemImage: "checkmark").frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.ink)
+                    .tint(.brandAction)
                     .controlSize(.large)
                     .accessibilityIdentifier("completion-done")
                 }
@@ -879,7 +919,7 @@ private struct DemoProjectCallout: View {
                 .font(.headline.weight(.bold))
                 .foregroundStyle(Color.brandPink)
                 .frame(width: 28, height: 28)
-                .background(Color.white, in: .circle)
+                .background(Color.elevatedSurface, in: .circle)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(compact ? "Demo project" : "You’re exploring a demo project")
@@ -896,7 +936,7 @@ private struct DemoProjectCallout: View {
             Spacer(minLength: 0)
         }
         .padding(compact ? 10 : 14)
-        .background(Color.ink, in: .rect(cornerRadius: 14))
+        .background(Color.brandAction, in: .rect(cornerRadius: 14))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(compact ? "Demo project. Try every step. Progress is saved only on this device." : "You’re exploring a demo project. Tap through every step to experience the reader. Your place is saved only on this device.")
     }
@@ -1024,10 +1064,10 @@ struct ProjectCreatedView: View {
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
                     NavigationLink { ReaderView(project: project, exitTitle: "Next step") } label: { Label("Start making", systemImage: "play.fill") }
-                        .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
+                        .buttonStyle(.borderedProminent).tint(.brandAction).controlSize(.large)
                         .accessibilityIdentifier("created-start-making")
                     NavigationLink { ProjectOverviewView(project: project) {} } label: { Label("View project overview", systemImage: "square.stack.3d.up") }
-                        .buttonStyle(.bordered).tint(.ink).controlSize(.large)
+                        .buttonStyle(.bordered).tint(.brandAction).controlSize(.large)
                 }
                 .padding(28)
                 .frame(maxWidth: .infinity)

@@ -160,7 +160,7 @@ struct UploadTokenResponse: Codable { let clientToken: String }
 struct BlobResponse: Codable { let url: URL }
 
 enum DemoData {
-    private struct Catalog: Decodable {
+    struct Catalog: Decodable {
         let patterns: [Pattern]
         let instructions: [String: [Instruction]]
         let project: Project
@@ -171,13 +171,33 @@ enum DemoData {
               let data = try? Data(contentsOf: url) else {
             fatalError("The bundled demo catalog is missing.")
         }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        guard let catalog = try? decoder.decode(Catalog.self, from: data) else {
+        guard let catalog = try? decodeCatalog(from: data) else {
             fatalError("The bundled demo catalog could not be decoded.")
         }
         return catalog
     }()
+
+    static func decodeCatalog(from data: Data) throws -> Catalog {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+
+            let fractionalFormatter = ISO8601DateFormatter()
+            fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            let standardFormatter = ISO8601DateFormatter()
+            standardFormatter.formatOptions = [.withInternetDateTime]
+
+            guard let date = fractionalFormatter.date(from: value) ?? standardFormatter.date(from: value) else {
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Expected an ISO-8601 date with optional fractional seconds."
+                )
+            }
+            return date
+        }
+        return try decoder.decode(Catalog.self, from: data)
+    }
 
     static let patterns = catalog.patterns
     static let pattern = patterns[0]

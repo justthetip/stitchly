@@ -61,7 +61,7 @@ struct OnboardingView: View {
                 HStack(spacing: 8) {
                     ForEach(OnboardingPage.pages) { item in
                         Capsule()
-                            .fill(item.id == selection ? Color.ink : Color.ink.opacity(0.24))
+                            .fill(item.id == selection ? Color.brandAction : Color.ink.opacity(0.24))
                             .frame(width: item.id == selection ? 28 : 8, height: 8)
                             .accessibilityHidden(true)
                     }
@@ -74,7 +74,7 @@ struct OnboardingView: View {
                             Text("Back").frame(maxWidth: .infinity)
                         }
                             .buttonStyle(.bordered)
-                            .tint(.ink)
+                            .tint(.brandAction)
                             .controlSize(.large)
                             .frame(maxWidth: .infinity)
                     }
@@ -87,7 +87,7 @@ struct OnboardingView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.ink)
+                    .tint(.brandAction)
                     .controlSize(.large)
                     .frame(maxWidth: .infinity)
                     .accessibilityHint(selection == OnboardingPage.pages.count - 1 ? "Opens Stitchly in guest mode" : "Shows the next introduction page")

@@ -26,7 +26,7 @@ struct OriginalPDFView: View {
                     } actions: {
                         Button("Try again") { Task { await load() } }
                             .buttonStyle(.borderedProminent)
-                            .tint(.ink)
+                            .tint(.brandAction)
                     }
                 }
             }

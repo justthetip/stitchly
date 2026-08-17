@@ -373,7 +373,9 @@ import XCTest
         }
         app.staticTexts["My Fruity Friends"].tap()
         XCTAssertTrue(app.navigationBars["Project overview"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.descendants(matching: .any)["explore-project-transformation"].exists)
+        let transformation = app.descendants(matching: .any)["explore-project-transformation"]
+        for _ in 0..<4 where !transformation.exists { app.swipeUp() }
+        XCTAssertTrue(transformation.waitForExistence(timeout: 3))
         for _ in 0..<4 where !app.buttons["explore-original-pdf"].isHittable { app.swipeUp() }
         XCTAssertTrue(app.buttons["explore-original-pdf"].exists)
         XCTAssertTrue(app.buttons["explore-standardized-pattern"].exists)
@@ -433,8 +435,22 @@ import XCTest
                 ["Featured", "More patterns"].contains(issue.element?.label ?? "")
         }
 
+        // The audit temporarily drives several content-size categories. Relaunch so the
+        // acquisition journey starts from the user's configured size and scroll position.
+        app.terminate()
+        app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryL"]
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 5))
+
+        let search = app.textFields["pattern-search-field"]
+        XCTAssertTrue(search.waitForExistence(timeout: 3))
+        search.tap()
+        search.typeText("Pocket-Sized Whale")
+        app.buttons["dismiss-pattern-search-keyboard"].tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
         let add = app.buttons["marketplace-add-market-mini-whale"]
-        for _ in 0..<8 where !add.isHittable { app.swipeUp() }
+        XCTAssertTrue(add.waitForExistence(timeout: 3))
+        app.collectionViews.firstMatch.swipeUp()
         XCTAssertTrue(add.isHittable)
         XCTAssertTrue(add.label.contains("Get free pattern"))
         XCTAssertTrue(app.staticTexts["Free"].firstMatch.exists)
@@ -483,5 +499,52 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Pattern ready"].waitForExistence(timeout: 3))
         app.buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 3))
+    }
+
+    func testCoreJourneysAreReadableInLightMode() throws {
+        try assertCoreJourneysAreReadable(appearanceArgument: "-lightModeForUITests")
+    }
+
+    func testCoreJourneysAreReadableInDarkMode() throws {
+        try assertCoreJourneysAreReadable(appearanceArgument: "-darkModeForUITests")
+    }
+
+    private func assertCoreJourneysAreReadable(appearanceArgument: String) throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-demo", "-projectsDemo", "-resetDemoReaderProgressForUITests",
+            "-skipOnboardingForUITests", "-skipFirstLaunchSplashForUITests", appearanceArgument
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Projects"].waitForExistence(timeout: 5))
+        try app.performAccessibilityAudit(for: [.contrast, .hitRegion, .textClipped])
+
+        app.tabBars.buttons["Patterns"].tap()
+        XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 3))
+        app.segmentedControls.buttons["My Patterns"].tap()
+        try app.performAccessibilityAudit(for: [.contrast, .hitRegion, .textClipped])
+
+        app.tabBars.buttons["Account"].tap()
+        XCTAssertTrue(app.navigationBars["Account"].waitForExistence(timeout: 3))
+        try app.performAccessibilityAudit(for: [.contrast, .hitRegion, .textClipped])
+
+        app.terminate()
+        app.launchArguments = [
+            "-demo", "-readerDemo", "-resetDemoReaderProgressForUITests",
+            "-skipOnboardingForUITests", "-skipFirstLaunchSplashForUITests", appearanceArgument
+        ]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Row 11"].waitForExistence(timeout: 5))
+        try app.performAccessibilityAudit(for: [.contrast, .hitRegion, .textClipped])
+
+        app.terminate()
+        app.launchArguments = [
+            "-resetAuthForUITests", "-skipOnboardingForUITests", "-showAuthForUITests",
+            "-skipFirstLaunchSplashForUITests", appearanceArgument
+        ]
+        app.launch()
+        XCTAssertTrue(app.buttons["Continue with Apple"].waitForExistence(timeout: 5))
+        try app.performAccessibilityAudit(for: [.contrast, .hitRegion, .textClipped])
     }
 }

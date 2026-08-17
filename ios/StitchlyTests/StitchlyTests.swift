@@ -8,6 +8,12 @@ struct StitchlyTests {
     @Test func firebaseConfigurationIsBundled() {
         #expect(Bundle.main.url(forResource: "GoogleService-Info", withExtension: "plist") != nil)
     }
+    @Test func bundledDemoCatalogDecodesFractionalISO8601Dates() throws {
+        let url = try #require(Bundle.main.url(forResource: "demo-catalog", withExtension: "json"))
+        let catalog = try DemoData.decodeCatalog(from: Data(contentsOf: url))
+        #expect(catalog.patterns.count == 3)
+        #expect(catalog.project.id == "demo-fruity-project")
+    }
     @Test func glossaryMatchingPreservesSourceAndPrefersLongerTerms() {
         let source = "K1, k2tog, then sc while scanning the row."
         let segments = PatternGlossary.segments(in: source)

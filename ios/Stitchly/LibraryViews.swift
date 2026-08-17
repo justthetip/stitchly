@@ -75,6 +75,7 @@ struct LibraryView: View {
     @State private var readyPattern: Pattern?
     @State private var createdProject: Project?
     @State private var addingListingID: String?
+    @FocusState private var searchIsFocused: Bool
     private var visiblePatterns: [Pattern] { PatternLibraryFiltering.apply(store.patterns, searchText: searchText, craft: craftFilter) }
     private var visibleMarketplaceListings: [MarketplacePatternListing] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -91,6 +92,28 @@ struct LibraryView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(Color.ink)
+                        .accessibilityHidden(true)
+                    TextField("Pattern or designer", text: $searchText, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .focused($searchIsFocused)
+                        .lineLimit(1...2)
+                        .foregroundStyle(Color.ink)
+                        .tint(.brandInteractive)
+                        .padding(.vertical, 14)
+                        .submitLabel(.search)
+                        .onSubmit { searchIsFocused = false }
+                        .accessibilityLabel("Search by pattern or designer")
+                        .accessibilityIdentifier("pattern-search-field")
+                }
+                .font(.body)
+                .padding(.horizontal, 14)
+                .background(Color.elevatedSurface, in: .capsule)
+                .padding(.horizontal)
+                .padding(.bottom, 12)
+
                 Picker("Pattern collection", selection: $selectedSection) {
                     ForEach(PatternHubSection.allCases) { section in Text(section.rawValue).tag(section) }
                 }
@@ -115,8 +138,12 @@ struct LibraryView: View {
                 }
             }
             .navigationTitle("Patterns")
-            .searchable(text: $searchText, prompt: "Pattern or designer")
             .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { searchIsFocused = false }
+                        .accessibilityIdentifier("dismiss-pattern-search-keyboard")
+                }
                 if selectedSection == .owned {
                     ToolbarItem(placement: .primaryAction) {
                         Button("Import", systemImage: "plus", action: beginImport)
@@ -171,7 +198,7 @@ struct LibraryView: View {
                 } actions: {
                     Button("Clear search and filters", action: resetFilters)
                         .buttonStyle(.borderedProminent)
-                        .tint(.ink)
+                        .tint(.brandAction)
                         .accessibilityIdentifier("clear-marketplace-filters")
                 }
             } else {
@@ -216,6 +243,7 @@ struct LibraryView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .scrollDismissesKeyboard(.interactively)
                 .accessibilityValue("\(visibleMarketplaceListings.count) marketplace patterns shown")
             }
         }
@@ -250,7 +278,7 @@ struct LibraryView: View {
                 } actions: {
                     Button("Clear search and filters", action: resetFilters)
                         .buttonStyle(.borderedProminent)
-                        .tint(.ink)
+                        .tint(.brandAction)
                         .accessibilityIdentifier("clear-library-filters")
                 }
             } else {
@@ -480,7 +508,7 @@ struct PatternRow: View {
     var body: some View {
         HStack(spacing: 14) {
             ListCoverThumbnail(path: pattern.coverUrl, fallbackAsset: "PatternFallback", size: 58)
-            VStack(alignment: .leading, spacing: 4) { Text(pattern.name).font(.headline); Text([pattern.designer, "\(pattern.totalInstructions) steps"].compactMap { $0 }.joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary) }
+            VStack(alignment: .leading, spacing: 4) { Text(pattern.name).font(.headline); Text([pattern.designer, "\(pattern.totalInstructions) steps"].compactMap { $0 }.joined(separator: " · ")).font(.subheadline).foregroundStyle(Color.ink) }
         }.padding(.vertical, 4)
     }
 }
@@ -550,7 +578,7 @@ private struct MarketplacePatternRow: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.ink)
+                .tint(.brandAction)
                 .controlSize(.large)
                 .disabled(isAdding)
                 .accessibilityIdentifier("marketplace-add-\(listing.id)")
@@ -594,7 +622,7 @@ struct AuthenticatedCoverImage: View {
                     .controlSize(.small)
                     .tint(.brandOrange)
                     .padding(6)
-                    .background(.white.opacity(0.92), in: .circle)
+                    .background(Color.elevatedSurface.opacity(0.94), in: .circle)
             }
         }
         .clipShape(.rect(cornerRadius: 14))
@@ -648,8 +676,8 @@ struct PatternDetailView: View {
                         .font(.subheadline)
                         .foregroundStyle(Color.ink)
                     if marketplaceListing == nil {
-                        Button { beginProject() } label: { Label("Start a project", systemImage: "plus").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.ink).controlSize(.large).accessibilityIdentifier("start-pattern-project")
-                        Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext").frame(maxWidth: .infinity) }.buttonStyle(.bordered).tint(.ink).controlSize(.large).accessibilityIdentifier("pattern-original-pdf")
+                        Button { beginProject() } label: { Label("Start a project", systemImage: "plus").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.brandAction).controlSize(.large).accessibilityIdentifier("start-pattern-project")
+                        Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext").frame(maxWidth: .infinity) }.buttonStyle(.bordered).tint(.brandAction).controlSize(.large).accessibilityIdentifier("pattern-original-pdf")
                     } else {
                         Label("Marketplace preview", systemImage: "storefront.fill")
                             .font(.headline)
@@ -761,7 +789,7 @@ private struct ImportIntroductionView: View {
                             .foregroundStyle(Color.ink)
                     }
                     Button(action: choosePDF) { Label("Choose PDF", systemImage: "doc.badge.plus").frame(maxWidth: .infinity) }
-                        .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
+                        .buttonStyle(.borderedProminent).tint(.brandAction).controlSize(.large)
                         .accessibilityIdentifier("choose-private-pdf")
                 }
                 .padding()
@@ -794,10 +822,10 @@ private struct PatternReadyView: View {
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
                     Button { createProject = true } label: { Label("Start a project", systemImage: "plus") }
-                        .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
+                        .buttonStyle(.borderedProminent).tint(.brandAction).controlSize(.large)
                         .accessibilityIdentifier("ready-start-project")
                     Button { showPattern = true } label: { Label("Review pattern", systemImage: "list.bullet.rectangle") }
-                        .buttonStyle(.bordered).tint(.ink).controlSize(.large)
+                        .buttonStyle(.bordered).tint(.brandAction).controlSize(.large)
                 }
                 .padding(28)
                 .frame(maxWidth: .infinity)

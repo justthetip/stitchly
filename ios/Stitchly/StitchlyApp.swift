@@ -2,6 +2,7 @@ import SwiftUI
 import AuthenticationServices
 import FirebaseCore
 import FirebaseAnalytics
+import FirebaseCrashlytics
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
@@ -10,6 +11,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         FirebaseApp.configure()
         Analytics.setAnalyticsCollectionEnabled(true)
+        Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(true)
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithOpaqueBackground()
+        tabBarAppearance.backgroundColor = .systemBackground
+        UITabBar.appearance().isTranslucent = false
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
         return true
     }
 }
@@ -32,11 +40,48 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 }
 
 extension Color {
-    static let brandOrange = Color(red: 1.0, green: 0.69, blue: 0.17)
-    static let brandPink = Color(red: 0.76, green: 0.20, blue: 0.34)
-    static let brandBlue = Color(red: 0.35, green: 0.76, blue: 0.92)
-    static let ink = Color(red: 0.03, green: 0.18, blue: 0.35)
-    static let cream = Color(red: 1.0, green: 0.96, blue: 0.87)
+    static let brandOrange = adaptive(
+        light: UIColor(red: 1.0, green: 0.69, blue: 0.17, alpha: 1),
+        dark: UIColor(red: 1.0, green: 0.74, blue: 0.30, alpha: 1)
+    )
+    static let brandPink = adaptive(
+        light: UIColor(red: 0.76, green: 0.20, blue: 0.34, alpha: 1),
+        dark: UIColor(red: 1.0, green: 0.43, blue: 0.58, alpha: 1)
+    )
+    static let brandBlue = adaptive(
+        light: UIColor(red: 0.35, green: 0.76, blue: 0.92, alpha: 1),
+        dark: UIColor(red: 0.43, green: 0.81, blue: 0.98, alpha: 1)
+    )
+    static let ink = adaptive(
+        light: UIColor(red: 0.03, green: 0.18, blue: 0.35, alpha: 1),
+        dark: UIColor(red: 0.93, green: 0.96, blue: 1.0, alpha: 1)
+    )
+    static let cream = adaptive(
+        light: UIColor(red: 1.0, green: 0.96, blue: 0.87, alpha: 1),
+        dark: UIColor(red: 0.04, green: 0.08, blue: 0.14, alpha: 1)
+    )
+    static let brandAction = adaptive(
+        light: UIColor(red: 0.03, green: 0.18, blue: 0.35, alpha: 1),
+        dark: UIColor(red: 0.16, green: 0.34, blue: 0.54, alpha: 1)
+    )
+    static let brandInteractive = adaptive(
+        light: UIColor(red: 0.03, green: 0.18, blue: 0.35, alpha: 1),
+        dark: UIColor(red: 0.43, green: 0.72, blue: 1.0, alpha: 1)
+    )
+    static let onBrandPink = adaptive(
+        light: .white,
+        dark: UIColor(red: 0.02, green: 0.07, blue: 0.13, alpha: 1)
+    )
+    static let accessibleDestructive = adaptive(
+        light: UIColor(red: 0.64, green: 0.0, blue: 0.10, alpha: 1),
+        dark: UIColor(red: 1.0, green: 0.48, blue: 0.55, alpha: 1)
+    )
+    static let surface = Color(uiColor: .systemBackground)
+    static let elevatedSurface = Color(uiColor: .secondarySystemBackground)
+
+    private static func adaptive(light: UIColor, dark: UIColor) -> Color {
+        Color(uiColor: UIColor { traits in traits.userInterfaceStyle == .dark ? dark : light })
+    }
 }
 
 struct RootView: View {
@@ -64,6 +109,7 @@ struct RootView: View {
             else if ProcessInfo.processInfo.arguments.contains("-readerDemo") { NavigationStack { ReaderView(project: DemoData.projectWithLocalProgress) } }
             else { MainTabs() }
         }
+            .preferredColorScheme(forcedAppearance)
             .onAppear {
                 if arguments.contains("-resetOnboardingForUITests") { hasCompletedOnboarding = false }
                 if arguments.contains("-resetFirstLaunchSplashForUITests") { hasShownFirstLaunchSplash = false }
@@ -91,6 +137,12 @@ struct RootView: View {
         !hasShownFirstLaunchSplash && !arguments.contains("-skipFirstLaunchSplashForUITests")
     }
 
+    private var forcedAppearance: ColorScheme? {
+        if arguments.contains("-darkModeForUITests") { return .dark }
+        if arguments.contains("-lightModeForUITests") { return .light }
+        return nil
+    }
+
     private func finishFirstLaunchSplash() async {
         try? await Task.sleep(for: BrandedSplashView.minimumDuration)
         hasShownFirstLaunchSplash = true
@@ -102,7 +154,7 @@ private struct AccountSyncRequiredView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [.cream, .white, .brandBlue.opacity(0.18)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            LinearGradient(colors: [.cream, .surface, .brandBlue.opacity(0.18)], startPoint: .topLeading, endPoint: .bottomTrailing)
                 .ignoresSafeArea()
             ContentUnavailableView {
                 Label("Connect once to finish signing in", systemImage: "icloud.and.arrow.down")
@@ -117,7 +169,7 @@ private struct AccountSyncRequiredView: View {
                         .frame(minWidth: 190)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.ink)
+                .tint(.brandAction)
                 .controlSize(.large)
                 .disabled(auth.isRestoring)
                 .accessibilityIdentifier("retry-account-sync")
@@ -152,6 +204,7 @@ struct SignInView: View {
     }
 
     @EnvironmentObject private var auth: AuthManager
+    @Environment(\.colorScheme) private var colorScheme
     @FocusState private var focusedField: AuthField?
     @State private var email = ""
     @State private var password = ""
@@ -187,7 +240,7 @@ struct SignInView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [.cream, .white, .brandPink.opacity(0.16)], startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
+            LinearGradient(colors: [.cream, .surface, .brandPink.opacity(0.16)], startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 18) {
                     if !emailExpanded {
@@ -201,7 +254,7 @@ struct SignInView: View {
                             .multilineTextAlignment(.center)
                             .padding(12)
                         .frame(maxWidth: .infinity)
-                        .background(Color.white.opacity(0.72), in: .rect(cornerRadius: 16))
+                        .background(Color.elevatedSurface.opacity(0.92), in: .rect(cornerRadius: 16))
                         .accessibilityElement(children: .combine)
                         .accessibilityHint(contextMessage ?? "")
                         .accessibilityIdentifier("authentication-context")
@@ -224,7 +277,7 @@ struct SignInView: View {
                             }
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.ink)
-                            .background(Color.white.opacity(0.82), in: .capsule)
+                            .background(Color.elevatedSurface.opacity(0.94), in: .capsule)
                             .overlay {
                                 Capsule().stroke(Color.ink.opacity(0.12), lineWidth: 1)
                             }
@@ -236,7 +289,7 @@ struct SignInView: View {
                         }
                         Button(createAccount ? "Already have an account? Sign in" : "New here? Create an account", action: toggleMode)
                             .font(.subheadline.weight(.semibold))
-                            .tint(.ink)
+                            .tint(.brandAction)
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .contentShape(.rect)
                             .disabled(isWorking)
@@ -313,12 +366,12 @@ struct SignInView: View {
                                 isLoading: isWorking
                             )
                         }
-                        .buttonStyle(.borderedProminent).tint(.ink).controlSize(.large)
+                        .buttonStyle(.borderedProminent).tint(.brandAction).controlSize(.large)
                         .allowsHitTesting(!isWorking)
                         .accessibilityIdentifier("auth-submit-button")
                     } else {
                         SignInWithAppleButton(.continue) { auth.prepare($0) } onCompletion: { result in Task { await auth.complete(result) } }
-                            .signInWithAppleButtonStyle(.black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(isWorking)
+                            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black).frame(height: 54).clipShape(.rect(cornerRadius: 14)).disabled(isWorking)
                         Button {
                             withAnimation { emailExpanded = true }
                         } label: {
@@ -326,7 +379,7 @@ struct SignInView: View {
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(.ink)
+                        .tint(.brandAction)
                         .controlSize(.large)
                         .disabled(isWorking)
                         .accessibilityIdentifier("continue-with-email")
@@ -425,7 +478,9 @@ struct MainTabs: View {
             Tab("Patterns", image: "TabPatterns", value: 1) { LibraryView() }
             Tab("Account", image: "TabAccount", value: 2) { AccountView() }
         }
-        .tint(.ink)
+        .tint(.brandInteractive)
+        .toolbarBackground(Color.surface, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
         .safeAreaInset(edge: .top, spacing: 0) {
             if !auth.isGuest { SyncStatusBanner().padding(.vertical, 6) }
         }
@@ -470,7 +525,7 @@ struct ActionableEmptyState: View {
                     .frame(minWidth: 180)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.ink)
+            .tint(.brandAction)
             .controlSize(.large)
             .disabled(isDisabled)
             .accessibilityIdentifier("empty-state-primary-action")
@@ -481,7 +536,7 @@ struct ActionableEmptyState: View {
                         .frame(minWidth: 180)
                 }
                 .buttonStyle(.bordered)
-                .tint(.ink)
+                .tint(.brandAction)
                 .controlSize(.large)
                 .disabled(isDisabled)
                 .accessibilityIdentifier("empty-state-secondary-action")
@@ -567,7 +622,7 @@ struct LoadingBanner: View {
     let message: String
     var body: some View {
         HStack(spacing: 10) {
-            ProgressView().tint(.ink).accessibilityHidden(true)
+            ProgressView().tint(.brandAction).accessibilityHidden(true)
             Text(message).font(.subheadline.weight(.semibold)).foregroundStyle(Color.ink)
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
