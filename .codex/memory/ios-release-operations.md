@@ -38,7 +38,7 @@ The simulator model/OS may change; inspect available destinations rather than as
 
 ## Archive
 
-Automatic archive signing may ask Apple for a development profile and fail when the team has no registered devices. The working App Store archive uses the installed distribution identity and App Store profile explicitly:
+Release signing is scoped to the Stitchly app target in `ios/project.yml`; leave Swift Package resource bundles on their own signing settings. Passing manual signing or a provisioning profile as a global `xcodebuild` override propagates it into Firebase resource-bundle targets and breaks the archive. Generate the project, verify the target-local Release settings, then archive without global signing overrides:
 
 ```sh
 xcodebuild archive \
@@ -46,10 +46,7 @@ xcodebuild archive \
   -scheme Stitchly \
   -configuration Release \
   -destination 'generic/platform=iOS' \
-  -archivePath ios/build/Stitchly-BUILD-release.xcarchive \
-  CODE_SIGN_STYLE=Manual \
-  CODE_SIGN_IDENTITY='Apple Distribution' \
-  PROVISIONING_PROFILE_SPECIFIER='com.lukejeffproduct.stitchly AppStore'
+  -archivePath ios/build/Stitchly-BUILD-release.xcarchive
 ```
 
 Use `ios/ExportOptions.plist` and the App Store Connect API environment for export/upload. Validate every variable and the API key path before invoking `xcodebuild -exportArchive`.
