@@ -2,19 +2,11 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
 
-enum PatternCraftFilter: String, CaseIterable, Identifiable {
-    case all = "All"
-    case knit = "Knit"
-    case crochet = "Crochet"
-    var id: Self { self }
-    func includes(_ pattern: Pattern) -> Bool { self == .all || pattern.craft.caseInsensitiveCompare(rawValue) == .orderedSame }
-}
-
 enum PatternLibraryFiltering {
-    static func apply(_ patterns: [Pattern], searchText: String, craft: PatternCraftFilter) -> [Pattern] {
+    static func apply(_ patterns: [Pattern], searchText: String) -> [Pattern] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         return patterns.filter { pattern in
-            craft.includes(pattern) && (query.isEmpty || pattern.name.localizedCaseInsensitiveContains(query) || (pattern.designer?.localizedCaseInsensitiveContains(query) ?? false))
+            query.isEmpty || pattern.name.localizedCaseInsensitiveContains(query) || (pattern.designer?.localizedCaseInsensitiveContains(query) ?? false)
         }
     }
 }
@@ -38,7 +30,7 @@ enum PatternLibraryFiltering {
         if userID == nil || client.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(6)) }
-            let basePatterns = ProcessInfo.processInfo.arguments.contains("-emptyLibraryDemo") ? [] : DemoData.patterns
+            let basePatterns = ProcessInfo.processInfo.arguments.contains("-emptyLibraryDemo") ? [] : [DemoData.pattern]
             patterns = PatternCollectionMerging.merge(primary: basePatterns, acquired: acquiredPatterns)
             return
         }
@@ -66,7 +58,6 @@ struct LibraryView: View {
     @State private var showImportIntroduction = false
     @State private var addingExample = false
     @State private var searchText = ""
-    @State private var craftFilter = PatternCraftFilter.all
     @State private var reviewResponse: PatternResponse?
     @State private var reviewWasExample = false
     @State private var patternToDelete: Pattern?
@@ -75,19 +66,22 @@ struct LibraryView: View {
     @State private var readyPattern: Pattern?
     @State private var createdProject: Project?
     @State private var addingListingID: String?
+    @State private var acquisitionError: String?
     @FocusState private var searchIsFocused: Bool
-    private var visiblePatterns: [Pattern] { PatternLibraryFiltering.apply(store.patterns, searchText: searchText, craft: craftFilter) }
+    private var visiblePatterns: [Pattern] { PatternLibraryFiltering.apply(store.patterns, searchText: searchText) }
     private var visibleMarketplaceListings: [MarketplacePatternListing] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         return PatternMarketplaceCatalog.listings.filter { listing in
-            craftFilter.includes(listing.pattern) && (
-                query.isEmpty || listing.pattern.name.localizedCaseInsensitiveContains(query) ||
+            query.isEmpty || listing.pattern.name.localizedCaseInsensitiveContains(query) ||
                 (listing.pattern.designer?.localizedCaseInsensitiveContains(query) ?? false) ||
                 listing.summary.localizedCaseInsensitiveContains(query)
-            )
         }
     }
-    private var ownedPatternIDs: Set<String> { Set(store.patterns.map(\.id)) }
+    private var ownedListingIDs: Set<String> {
+        let availablePatternIDs = Set(store.patterns.map(\.id))
+        return PatternMarketplaceOwnership.acquiredListingIDs(for: auth.contentIdentity, availablePatternIDs: availablePatternIDs)
+            .union(availablePatternIDs.intersection(Set(PatternMarketplaceCatalog.listings.map(\.id))))
+    }
 
     var body: some View {
         NavigationStack {
@@ -122,14 +116,6 @@ struct LibraryView: View {
                 .padding(.bottom, 10)
                 .accessibilityIdentifier("patterns-section-picker")
                 .accessibilityHint("Switches between the marketplace and patterns you own")
-
-                Picker("Craft", selection: $craftFilter) {
-                    ForEach(PatternCraftFilter.allCases) { filter in Text(filter.rawValue).tag(filter) }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-                .accessibilityHint("Filters patterns by craft")
 
                 if selectedSection == .marketplace {
                     marketplaceContent
@@ -174,12 +160,13 @@ struct LibraryView: View {
             .refreshable { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) }
             .alert("Couldn’t load library", isPresented: .init(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("Try again") { Task { await store.load(client: auth.client, userID: auth.user?.id, forceRefresh: true) } } } message: { Text(store.error ?? "") }
             .alert("Pattern wasn’t deleted", isPresented: .init(get: { deletionError != nil }, set: { if !$0 { deletionError = nil } })) { Button("OK") {} } message: { Text(deletionError ?? "") }
+            .alert("Pattern wasn’t added", isPresented: .init(get: { acquisitionError != nil }, set: { if !$0 { acquisitionError = nil } })) { Button("OK") {} } message: { Text(acquisitionError ?? "") }
             .confirmationDialog("Delete this pattern?", isPresented: .init(get: { patternToDelete != nil }, set: { if !$0 { patternToDelete = nil } }), titleVisibility: .visible, presenting: patternToDelete) { pattern in
                 Button("Delete \(pattern.name)", role: .destructive) { Task { await deletePattern(pattern) } }
                 Button("Cancel", role: .cancel) { patternToDelete = nil }
             } message: { pattern in
-                if PatternMarketplaceOwnership.acquiredIDs(for: auth.contentIdentity).contains(pattern.id) {
-                    Text("This removes the marketplace preview from My Patterns. You can add it again later.")
+                if marketplaceListingID(for: pattern) != nil {
+                    Text("This removes the pattern from My Patterns. You can add it again later.")
                 } else {
                     Text("This permanently deletes \(pattern.name), its PDF, linked projects, progress, and notes.")
                 }
@@ -194,9 +181,9 @@ struct LibraryView: View {
                 ContentUnavailableView {
                     Label("No matching marketplace patterns", systemImage: "magnifyingglass")
                 } description: {
-                    Text("Try another search or reset the active craft filter.")
+                    Text("Try another search.")
                 } actions: {
-                    Button("Clear search and filters", action: resetFilters)
+                    Button("Clear search", action: resetFilters)
                         .buttonStyle(.borderedProminent)
                         .tint(.brandAction)
                         .accessibilityIdentifier("clear-marketplace-filters")
@@ -209,9 +196,9 @@ struct LibraryView: View {
                                 .font(.title2.bold())
                                 .foregroundStyle(Color.ink)
                                 .fixedSize(horizontal: false, vertical: true)
-                            Text("Browse free and paid pattern previews, then keep the ones you like alongside your imported PDFs.")
+                            Text("Choose from two free patterns with complete PDFs and instructions, ready to add to your library and use for a project.")
                                 .foregroundStyle(Color.ink)
-                            Label("Preview marketplace — no payment is taken", systemImage: "info.circle.fill")
+                            Label("Both patterns are free", systemImage: "gift.fill")
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(Color.ink)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -219,27 +206,8 @@ struct LibraryView: View {
                         }
                         .padding(.vertical, 6)
                     }
-                    let featured = visibleMarketplaceListings.filter(\.featured)
-                    if !featured.isEmpty {
-                        Section {
-                            ForEach(featured) { listing in marketplaceRow(listing) }
-                        } header: {
-                            Text("Featured")
-                                .font(.headline)
-                                .foregroundStyle(Color.ink)
-                        }
-                        .headerProminence(.increased)
-                    }
-                    let more = visibleMarketplaceListings.filter { !$0.featured }
-                    if !more.isEmpty {
-                        Section {
-                            ForEach(more) { listing in marketplaceRow(listing) }
-                        } header: {
-                            Text("More patterns")
-                                .font(.headline)
-                                .foregroundStyle(Color.ink)
-                        }
-                        .headerProminence(.increased)
+                    Section {
+                        ForEach(visibleMarketplaceListings) { listing in marketplaceRow(listing) }
                     }
                 }
                 .listStyle(.insetGrouped)
@@ -252,7 +220,7 @@ struct LibraryView: View {
     @ViewBuilder private func marketplaceRow(_ listing: MarketplacePatternListing) -> some View {
         MarketplacePatternRow(
             listing: listing,
-            isOwned: ownedPatternIDs.contains(listing.id),
+            isOwned: ownedListingIDs.contains(listing.id),
             isAdding: addingListingID == listing.id
         ) {
             Task { await acquire(listing) }
@@ -274,9 +242,9 @@ struct LibraryView: View {
                 ContentUnavailableView {
                     Label("No matching patterns", systemImage: "magnifyingglass")
                 } description: {
-                    Text("Try another search or reset the active craft filter.")
+                    Text("Try another search.")
                 } actions: {
-                    Button("Clear search and filters", action: resetFilters)
+                    Button("Clear search", action: resetFilters)
                         .buttonStyle(.borderedProminent)
                         .tint(.brandAction)
                         .accessibilityIdentifier("clear-library-filters")
@@ -297,18 +265,47 @@ struct LibraryView: View {
         }
     }
 
-    private func resetFilters() { searchText = ""; craftFilter = .all }
+    private func resetFilters() { searchText = "" }
 
     private func acquire(_ listing: MarketplacePatternListing) async {
-        guard addingListingID == nil, !ownedPatternIDs.contains(listing.id) else { return }
+        guard addingListingID == nil, !ownedListingIDs.contains(listing.id) else { return }
+        guard !auth.isGuest else {
+            auth.requireAuthentication(title: "Create an account to add a pattern", message: "Free marketplace patterns are copied into your private library so you can use them in projects and keep your progress in sync.")
+            return
+        }
         addingListingID = listing.id
         defer { addingListingID = nil }
-        try? await Task.sleep(for: .milliseconds(450))
-        guard !Task.isCancelled else { return }
-        if PatternMarketplaceOwnership.acquire(listing.id, for: auth.contentIdentity) {
+        if auth.token == "demo" {
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+            PatternMarketplaceOwnership.record(listingID: listing.id, patternID: listing.id, for: auth.contentIdentity)
             withAnimation {
                 store.patterns = PatternCollectionMerging.merge(primary: store.patterns, acquired: [listing.pattern])
             }
+            return
+        }
+        guard let user = auth.user,
+              let resource = DemoData.pdfResource(for: listing.id),
+              let url = Bundle.main.url(forResource: resource, withExtension: "pdf") else {
+            acquisitionError = "The complete bundled PDF could not be opened."
+            return
+        }
+        do {
+            store.loadingMessage = "Adding \(listing.pattern.name) to your library…"
+            let blob = try await auth.client.uploadPDF(url, userID: user.id)
+            store.loadingMessage = "Reading the PDF and preparing its complete instructions…"
+            struct ParseBody: Encodable { let url: String; let name: String }
+            let response: PatternResponse = try await auth.client.request(
+                "/api/patterns/parse",
+                method: "POST",
+                body: ParseBody(url: blob.url.absoluteString, name: listing.pattern.name)
+            )
+            PatternMarketplaceOwnership.record(listingID: listing.id, patternID: response.pattern.id, for: auth.contentIdentity)
+            withAnimation { store.patterns.insert(response.pattern, at: 0) }
+            await AppDataCache.shared.store(patterns: store.patterns, for: user.id)
+            Telemetry.shared.track("pdf_import_completed")
+        } catch {
+            acquisitionError = error.localizedDescription
         }
     }
     private func beginImport() {
@@ -336,14 +333,14 @@ struct LibraryView: View {
     }
     private func deletePattern(_ pattern: Pattern) async {
         guard !deletingPattern else { return }
-        if PatternMarketplaceOwnership.acquiredIDs(for: auth.contentIdentity).contains(pattern.id) {
+        if auth.token == "demo", let listingID = marketplaceListingID(for: pattern) {
             deletingPattern = true; patternToDelete = nil
             store.loadingMessage = "Removing \(pattern.name) from My Patterns…"
             store.isLoading = true
             defer { deletingPattern = false; store.isLoading = false }
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
-            PatternMarketplaceOwnership.remove(pattern.id, for: auth.contentIdentity)
+            PatternMarketplaceOwnership.removeListing(listingID, for: auth.contentIdentity)
             store.patterns.removeAll { $0.id == pattern.id }
             return
         }
@@ -359,9 +356,15 @@ struct LibraryView: View {
         if auth.token == "demo" { store.patterns.removeAll { $0.id == pattern.id }; return }
         do {
             let _: EmptyResponse = try await auth.client.request("/api/patterns/\(pattern.id)", method: "DELETE")
+            PatternMarketplaceOwnership.removePattern(pattern.id, for: auth.contentIdentity)
             store.patterns.removeAll { $0.id == pattern.id }
             if let userID = auth.user?.id { await AppDataCache.shared.store(patterns: store.patterns, for: userID) }
         } catch { deletionError = error.localizedDescription }
+    }
+
+    private func marketplaceListingID(for pattern: Pattern) -> String? {
+        PatternMarketplaceOwnership.listingID(for: pattern.id, identity: auth.contentIdentity)
+            ?? (PatternMarketplaceCatalog.listing(for: pattern.id) == nil ? nil : pattern.id)
     }
     private func addExample() async {
         guard !store.isLoading, !addingExample else { return }
@@ -522,16 +525,7 @@ private struct MarketplacePatternRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 14) {
-                ZStack {
-                    LinearGradient(
-                        colors: listing.featured ? [.brandPink.opacity(0.75), .brandOrange.opacity(0.82)] : [.brandBlue.opacity(0.75), .cream],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    Image(systemName: listing.symbol)
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(Color.ink)
-                }
+                AuthenticatedCoverImage(path: listing.pattern.coverUrl, fallbackAsset: "PatternFallback")
                 .frame(width: 76, height: 76)
                 .clipShape(.rect(cornerRadius: 18))
                 .accessibilityHidden(true)
@@ -542,7 +536,7 @@ private struct MarketplacePatternRow: View {
                             .font(.headline)
                             .foregroundStyle(Color.ink)
                         Spacer(minLength: 8)
-                        Text(listing.price.displayName)
+                        Text("Free")
                             .font(.subheadline.bold())
                             .foregroundStyle(Color.ink)
                     }
@@ -573,7 +567,7 @@ private struct MarketplacePatternRow: View {
                     if isAdding {
                         LoadingButtonLabel("Adding \(listing.pattern.name)…")
                     } else {
-                        Label(listing.price.acquisitionTitle, systemImage: listing.price == .free ? "arrow.down.circle" : "plus.circle")
+                        Label("Add to My Patterns", systemImage: "arrow.down.circle")
                             .frame(maxWidth: .infinity, minHeight: 24)
                     }
                 }
@@ -582,7 +576,7 @@ private struct MarketplacePatternRow: View {
                 .controlSize(.large)
                 .disabled(isAdding)
                 .accessibilityIdentifier("marketplace-add-\(listing.id)")
-                .accessibilityHint("Adds this preview pattern to My Patterns. No payment is taken.")
+                .accessibilityHint("Adds the complete PDF pattern and instructions to My Patterns.")
             }
         }
         .padding(.vertical, 6)
@@ -656,7 +650,6 @@ struct PatternDetailView: View {
     @State private var showOriginal = false
     @State private var createdProject: Project?
     @State private var selectedGlossaryTerm: PatternGlossaryTerm?
-    private var marketplaceListing: MarketplacePatternListing? { PatternMarketplaceCatalog.listing(for: pattern.id) }
     var body: some View {
         List {
             Section {
@@ -675,18 +668,8 @@ struct PatternDetailView: View {
                     HStack { if let yarn = pattern.yarn { Label(yarn, systemImage: "circle.fill") }; if let tool = pattern.tool { Label(tool, systemImage: "wrench.and.screwdriver") } }
                         .font(.subheadline)
                         .foregroundStyle(Color.ink)
-                    if marketplaceListing == nil {
-                        Button { beginProject() } label: { Label("Start a project", systemImage: "plus").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.brandAction).controlSize(.large).accessibilityIdentifier("start-pattern-project")
-                        Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext").frame(maxWidth: .infinity) }.buttonStyle(.bordered).tint(.brandAction).controlSize(.large).accessibilityIdentifier("pattern-original-pdf")
-                    } else {
-                        Label("Marketplace preview", systemImage: "storefront.fill")
-                            .font(.headline)
-                            .foregroundStyle(Color.ink)
-                        Text("This mocked listing includes a short preview. Checkout, the complete source pattern, and project creation will be connected in a later marketplace release.")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.ink)
-                            .accessibilityIdentifier("marketplace-pattern-preview-note")
-                    }
+                    Button { beginProject() } label: { Label("Start a project", systemImage: "plus").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.brandAction).controlSize(.large).accessibilityIdentifier("start-pattern-project")
+                    Button { showOriginal = true } label: { Label("View original PDF", systemImage: "doc.richtext").frame(maxWidth: .infinity) }.buttonStyle(.bordered).tint(.brandAction).controlSize(.large).accessibilityIdentifier("pattern-original-pdf")
                 }.padding(.vertical)
             }
             if isLoading { Section { LoadingBanner(message: "Loading sections and laying out each instruction…").frame(maxWidth: .infinity) } }
@@ -740,13 +723,6 @@ struct PatternDetailView: View {
         .alert("Couldn’t open pattern", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("Try again") { Task { await load() } } } message: { Text(error ?? "") }
     }
     private func load() async {
-        if let previewInstructions = PatternMarketplaceCatalog.instructions(for: pattern.id) {
-            isLoading = true
-            defer { isLoading = false }
-            if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
-            instructions = previewInstructions
-            return
-        }
         if auth.isGuest || auth.token == "demo" {
             isLoading = true; defer { isLoading = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }

@@ -248,7 +248,7 @@ enum DemoData {
     }
 
     static func isDemoProject(_ projectID: String) -> Bool {
-        projectID == project.id || projectID == completedProject.id
+        projectID == project.id || projectID == completedProject.id || projectID.hasPrefix("demo-marketplace-project-")
     }
 
     static func readerPositionKey(for projectID: String) -> String {

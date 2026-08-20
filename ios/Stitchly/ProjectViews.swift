@@ -1003,7 +1003,14 @@ struct CreateProjectView: View {
         if auth.isGuest || auth.token == "demo" {
             isLoadingPatterns = true; defer { isLoadingPatterns = false }
             if ProcessInfo.processInfo.arguments.contains("-simulateSlowLoading") { try? await Task.sleep(for: .seconds(4)) }
-            patterns = DemoData.patterns; selected = initialPattern?.id ?? DemoData.pattern.id
+            patterns = PatternCollectionMerging.merge(
+                primary: [DemoData.pattern],
+                acquired: PatternMarketplaceOwnership.acquiredPatterns(for: auth.contentIdentity)
+            )
+            if let initialPattern, !patterns.contains(where: { $0.id == initialPattern.id }) {
+                patterns.append(initialPattern)
+            }
+            selected = initialPattern?.id ?? DemoData.pattern.id
             return
         }
         guard let userID = auth.user?.id else { return }
@@ -1025,7 +1032,23 @@ struct CreateProjectView: View {
         isCreating = true
         defer { isCreating = false }
         var shouldRequestReview = false
-        var createdProject: Project? = auth.token == "demo" ? DemoData.project : nil
+        var createdProject: Project?
+        if auth.token == "demo", let pattern = selectedPattern {
+            createdProject = Project(
+                id: "demo-marketplace-project-\(pattern.id)",
+                patternId: pattern.id,
+                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                status: "active",
+                yarn: yarn.trimmingCharacters(in: .whitespacesAndNewlines),
+                currentInstruction: 1,
+                patternName: pattern.name,
+                totalInstructions: pattern.totalInstructions,
+                craft: pattern.craft,
+                startedAt: Date(),
+                lastWorkedAt: Date(),
+                coverUrl: pattern.coverUrl
+            )
+        }
         if auth.token != "demo" {
             struct Body: Encodable { let patternId: String; let name: String; let yarn: String; let notes: String }
             do {

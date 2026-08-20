@@ -77,23 +77,22 @@ struct StitchlyTests {
         #expect(steps[0].lastPosition == 72)
         #expect(steps[0].repeatCount == 32)
     }
-    @Test func patternLibrarySearchAndCraftFiltersCompose() {
+    @Test func patternLibrarySearchMatchesNamesAndDesigners() {
         let knit = Pattern(id: "knit", name: "Coastal Cardigan", designer: "Mina Moss", craft: "knit", difficulty: nil, yarn: nil, tool: nil, totalInstructions: 10, source: "PDF", pageCount: 4)
         let crochet = Pattern(id: "crochet", name: "Garden Wrap", designer: "Coastal Studio", craft: "crochet", difficulty: nil, yarn: nil, tool: nil, totalInstructions: 8, source: "PDF", pageCount: 3)
         let patterns = [knit, crochet]
-        #expect(PatternLibraryFiltering.apply(patterns, searchText: "coastal", craft: .all).map(\.id) == ["knit", "crochet"])
-        #expect(PatternLibraryFiltering.apply(patterns, searchText: "COASTAL", craft: .crochet).map(\.id) == ["crochet"])
-        #expect(PatternLibraryFiltering.apply(patterns, searchText: "missing", craft: .all).isEmpty)
-        #expect(PatternLibraryFiltering.apply(patterns, searchText: "", craft: .all).count == 2)
+        #expect(PatternLibraryFiltering.apply(patterns, searchText: "coastal").map(\.id) == ["knit", "crochet"])
+        #expect(PatternLibraryFiltering.apply(patterns, searchText: "GARDEN").map(\.id) == ["crochet"])
+        #expect(PatternLibraryFiltering.apply(patterns, searchText: "missing").isEmpty)
+        #expect(PatternLibraryFiltering.apply(patterns, searchText: "").count == 2)
     }
 
-    @Test func marketplaceContainsFreeAndVariedPaidPatterns() {
+    @Test func marketplaceContainsExactlyTwoCompleteBundledPatterns() {
         let listings = PatternMarketplaceCatalog.listings
-        #expect(listings.count >= 8)
-        #expect(listings.contains { $0.price == .free })
-        #expect(listings.contains { $0.price == .paid(pence: 299) })
-        #expect(listings.contains { $0.price == .paid(pence: 750) })
-        #expect(Set(listings.map(\.pattern.craft)) == ["Crochet", "Knit"])
+        #expect(listings.count == 2)
+        #expect(Set(listings.map(\.id)) == ["demo-mini-whale", "demo-perfect-granny-square"])
+        #expect(listings.allSatisfy { DemoData.pdfResource(for: $0.id) != nil })
+        #expect(listings.allSatisfy { !DemoData.instructions(for: $0.id).isEmpty })
         #expect(Set(listings.map(\.id)).count == listings.count)
     }
 
@@ -103,15 +102,16 @@ struct StitchlyTests {
         defer { defaults.removePersistentDomain(forName: suite) }
         let listing = PatternMarketplaceCatalog.listings[0]
 
-        #expect(PatternMarketplaceOwnership.acquire(listing.id, for: "maker-a", defaults: defaults))
-        #expect(!PatternMarketplaceOwnership.acquire(listing.id, for: "maker-a", defaults: defaults))
-        #expect(PatternMarketplaceOwnership.acquiredPatterns(for: "maker-a", defaults: defaults).map(\.id) == [listing.id])
+        PatternMarketplaceOwnership.record(listingID: listing.id, patternID: "private-pattern-a", for: "maker-a", defaults: defaults)
+        PatternMarketplaceOwnership.record(listingID: listing.id, patternID: "private-pattern-a", for: "maker-a", defaults: defaults)
+        #expect(PatternMarketplaceOwnership.patternID(for: listing.id, identity: "maker-a", defaults: defaults) == "private-pattern-a")
+        #expect(PatternMarketplaceOwnership.acquiredListingIDs(for: "maker-a", availablePatternIDs: ["private-pattern-a"], defaults: defaults) == [listing.id])
         #expect(PatternMarketplaceOwnership.acquiredPatterns(for: "maker-b", defaults: defaults).isEmpty)
 
         let merged = PatternCollectionMerging.merge(primary: [listing.pattern], acquired: [listing.pattern])
         #expect(merged.map(\.id) == [listing.id])
-        PatternMarketplaceOwnership.remove(listing.id, for: "maker-a", defaults: defaults)
-        #expect(PatternMarketplaceOwnership.acquiredIDs(for: "maker-a", defaults: defaults).isEmpty)
+        PatternMarketplaceOwnership.removePattern("private-pattern-a", for: "maker-a", defaults: defaults)
+        #expect(PatternMarketplaceOwnership.acquiredPatternIDs(for: "maker-a", defaults: defaults).isEmpty)
     }
 
     @MainActor @Test func authenticationSwapRemovesDemoContentAndSignOutRestoresIt() async {
@@ -140,7 +140,7 @@ struct StitchlyTests {
 
         await library.load(client: APIClient(token: "demo"), userID: nil)
         await projects.load(client: APIClient(token: "demo"), userID: nil)
-        #expect(library.patterns.count == DemoData.patterns.count)
+        #expect(library.patterns == [DemoData.pattern])
         #expect(projects.projects.map(\.id) == [DemoData.project.id, DemoData.completedProject.id])
 
         await library.load(client: emptyClient, userID: userID)
@@ -150,7 +150,7 @@ struct StitchlyTests {
 
         await library.load(client: APIClient(token: "demo"), userID: nil)
         await projects.load(client: APIClient(token: "demo"), userID: nil)
-        #expect(library.patterns.count == DemoData.patterns.count)
+        #expect(library.patterns == [DemoData.pattern])
         #expect(projects.projects.map(\.id) == [DemoData.project.id, DemoData.completedProject.id])
     }
 

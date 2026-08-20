@@ -181,8 +181,11 @@ import XCTest
         app.tabBars.buttons["Patterns"].tap()
         app.segmentedControls.buttons["My Patterns"].tap()
         XCTAssertTrue(app.staticTexts["Fruity Friends"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Mini Whale"].exists)
-        XCTAssertTrue(app.staticTexts["The Perfect Granny Square"].exists)
+        XCTAssertFalse(app.staticTexts["Mini Whale"].exists)
+        XCTAssertFalse(app.staticTexts["The Perfect Granny Square"].exists)
+        app.segmentedControls.buttons["Marketplace"].tap()
+        XCTAssertTrue(app.staticTexts["Mini Whale"].waitForExistence(timeout: 3))
+        app.segmentedControls.buttons["My Patterns"].tap()
         app.staticTexts["Fruity Friends"].tap()
         XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
         app.buttons["pattern-original-pdf"].tap()
@@ -419,13 +422,13 @@ import XCTest
 
     func testMarketplaceAddsAFreePatternToMyPatterns() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-demo", "-libraryDemo", "-resetMarketplaceForUITests", "-skipFirstLaunchSplashForUITests"]
+        app.launchArguments = ["-demo", "-libraryDemo", "-emptyLibraryDemo", "-resetMarketplaceForUITests", "-skipFirstLaunchSplashForUITests"]
         app.launch()
 
         XCTAssertTrue(app.navigationBars["Patterns"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Find your next make"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["marketplace-no-charge-note"].exists)
-        XCTAssertTrue(app.staticTexts["£4.99"].exists)
+        XCTAssertFalse(app.staticTexts["£4.99"].exists)
         // Contrast and clipping were checked manually on this translucent scrolling layout; Xcode
         // 26 evaluates rows beneath the floating tab bar and the native search-field placeholder.
         // Its native List section headers also scale correctly in the dedicated largest-text test,
@@ -445,23 +448,29 @@ import XCTest
         let search = app.textFields["pattern-search-field"]
         XCTAssertTrue(search.waitForExistence(timeout: 3))
         search.tap()
-        search.typeText("Pocket-Sized Whale")
+        search.typeText("Mini Whale")
         app.buttons["dismiss-pattern-search-keyboard"].tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
-        let add = app.buttons["marketplace-add-market-mini-whale"]
+        let add = app.buttons["marketplace-add-demo-mini-whale"]
         XCTAssertTrue(add.waitForExistence(timeout: 3))
         app.collectionViews.firstMatch.swipeUp()
         XCTAssertTrue(add.isHittable)
-        XCTAssertTrue(add.label.contains("Get free pattern"))
+        XCTAssertTrue(add.label.contains("Add to My Patterns"))
         XCTAssertTrue(app.staticTexts["Free"].firstMatch.exists)
         add.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["marketplace-owned-market-mini-whale"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["marketplace-owned-demo-mini-whale"].waitForExistence(timeout: 3))
 
         app.segmentedControls.buttons["My Patterns"].tap()
-        XCTAssertTrue(app.staticTexts["Pocket-Sized Whale"].waitForExistence(timeout: 3))
-        app.staticTexts["Pocket-Sized Whale"].tap()
+        XCTAssertTrue(app.staticTexts["Mini Whale"].waitForExistence(timeout: 3))
+        app.staticTexts["Mini Whale"].tap()
         XCTAssertTrue(app.navigationBars["Pattern overview"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["marketplace-pattern-preview-note"].exists)
+        XCTAssertTrue(app.buttons["pattern-original-pdf"].exists)
+        app.buttons["start-pattern-project"].tap()
+        XCTAssertTrue(app.navigationBars["New project"].waitForExistence(timeout: 3))
+        app.buttons["Create"].tap()
+        XCTAssertTrue(app.buttons["created-start-making"].waitForExistence(timeout: 3))
+        app.buttons["created-start-making"].tap()
+        XCTAssertTrue(app.navigationBars["Mini Whale project"].waitForExistence(timeout: 3))
     }
 
     func testPatternCanBeDeletedFromLibrary() {
@@ -477,8 +486,18 @@ import XCTest
         XCTAssertTrue(app.buttons["Delete Fruity Friends"].waitForExistence(timeout: 3))
         app.buttons["Delete Fruity Friends"].tap()
         XCTAssertTrue(app.staticTexts["Fruity Friends"].waitForNonExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Mini Whale"].exists)
-        XCTAssertTrue(app.staticTexts["The Perfect Granny Square"].exists)
+        XCTAssertTrue(app.staticTexts["No patterns yet"].exists)
+    }
+
+    func testAccountCanReturnToDemoMode() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-demo", "-projectsDemo", "-skipFirstLaunchSplashForUITests"]
+        app.launch()
+
+        app.tabBars.buttons["Account"].tap()
+        XCTAssertTrue(app.navigationBars["Account"].waitForExistence(timeout: 3))
+        let backToDemo = app.buttons["back-to-demo-mode"]
+        XCTAssertTrue(backToDemo.exists)
     }
 
     func testImportedPatternCanBeReviewedEditedAndSaved() {

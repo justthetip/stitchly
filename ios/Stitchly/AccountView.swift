@@ -24,9 +24,11 @@ struct AccountView: View {
                 } else {
                     Section {
                         Button { Task { await prepareToSignOut() } } label: {
-                            externalLinkLabel("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                            externalLinkLabel("Back to demo mode", systemImage: "sparkles")
                         }
-                            .disabled(auth.isWorking || isPreparingSignOut)
+                        .disabled(auth.isWorking || isPreparingSignOut)
+                        .accessibilityHint("Signs out and returns to Stitchly's built-in demo patterns and projects.")
+                        .accessibilityIdentifier("back-to-demo-mode")
                         Button(role: .destructive) { confirmDelete = true } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "trash").accessibilityHidden(true)
@@ -87,6 +89,11 @@ struct AccountView: View {
 
     private func prepareToSignOut() async {
         guard !isPreparingSignOut else { return }
+        if auth.token == "demo" {
+            operationMessage = "Returning to the built-in demo…"
+            await auth.signOut()
+            return
+        }
         if sync.pendingCount > 0 {
             guard connectivity.isOnline else { confirmDiscardingPendingChanges = true; return }
             isPreparingSignOut = true
